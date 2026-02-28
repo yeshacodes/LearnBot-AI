@@ -1,0 +1,65 @@
+:root {
+  --bg: #fff7fa;
+  --surface: #ffffff;
+  --surface2: #fff1f6;
+  --border: #f3d0df;
+  --text: #111827;
+  --muted: #6b7280;
+  --accent: #e84a8a;
+}
+
+.dark {
+  --bg: #0b1220;
+  --surface: #111a2e;
+  --surface2: #0f172a;
+  --border: #24324a;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --accent: #ff4da6;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--text) 14%, transparent);
+  border-radius: 10px;
+}
+
+.active-nav-shadow {
+  box-shadow: 0 10px 15px -3px color-mix(in oklab, var(--accent) 40%, transparent),
+    0 4px 6px -4px color-mix(in oklab, var(--accent) 25%, transparent);
+}
