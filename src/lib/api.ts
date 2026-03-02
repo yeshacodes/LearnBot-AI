@@ -8,7 +8,11 @@ export async function getAccessToken(): Promise<string | null> {
 
 export function getApiBase(): string {
   const env = import.meta.env as Record<string, string | undefined>;
-  const base = env.NEXT_PUBLIC_API_BASE_URL || env.VITE_API_BASE || "http://localhost:8000";
+  const baseRaw =
+    env.NEXT_PUBLIC_API_BASE_URL ||
+    env.VITE_API_BASE ||
+    "http://localhost:8000";
+  const base = baseRaw.trim();
   return base.replace(/\/$/, "");
 }
 
