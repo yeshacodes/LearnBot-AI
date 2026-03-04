@@ -58,23 +58,23 @@ const App: React.FC = () => {
   const defaultAppRoute = AppRoute.CHAT;
 
   return (
-    <div className="min-h-screen bg-background text-primary">
+    <div className="min-h-screen bg-pink-50 dark:bg-[#0b1220] text-primary">
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
           <Route
             path="/"
-            element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Landing />}
+            element={loading ? <div className="min-h-screen" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Landing />}
           />
           <Route
             path="/auth"
-            element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
+            element={loading ? <div className="min-h-screen" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
           />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/auth/reset" element={<ResetPassword />} />
           <Route
             path="/login"
-            element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
+            element={loading ? <div className="min-h-screen" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
           />
           <Route
             path="/register"

@@ -88,7 +88,7 @@ const DashboardLayout: React.FC = () => {
   }, [user?.id]);
 
   return (
-    <div className="flex min-h-screen bg-background text-primary">
+    <div className="flex min-h-screen text-primary">
       {/* Sidebar Overlay (Mobile) */}
       {isSidebarOpen && (
         <div 

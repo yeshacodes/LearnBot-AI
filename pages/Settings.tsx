@@ -46,7 +46,7 @@ const Settings: React.FC<SettingsProps> = ({ user, isDarkMode, toggleDarkMode })
               <div className="p-2 bg-surface2 text-accent rounded-lg">
                 {isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
               </div>
-              <span className="text-sm font-medium text-primary">Dark Mode</span>
+              <span className="text-sm font-medium text-primary">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
             </div>
             <button
               onClick={toggleDarkMode}
