@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AuthCallback from "./pages/AuthCallback";
+import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Upload from "./pages/Upload";
@@ -62,6 +63,10 @@ const App: React.FC = () => {
         <Routes>
           {/* Public Routes */}
           <Route
+            path="/"
+            element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Landing />}
+          />
+          <Route
             path="/auth"
             element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
           />
@@ -69,11 +74,11 @@ const App: React.FC = () => {
           <Route path="/auth/reset" element={<ResetPassword />} />
           <Route
             path="/login"
-            element={<Navigate to="/auth" replace />}
+            element={loading ? <div className="min-h-screen bg-background" /> : session ? <Navigate to={defaultAppRoute} replace /> : <Login />}
           />
           <Route
             path="/register"
-            element={<Navigate to="/auth" replace />}
+            element={<Navigate to="/login" replace />}
           />
 
           {/* Protected App Routes */}
@@ -98,7 +103,7 @@ const App: React.FC = () => {
           </Route>
 
           {/* Catch-all */}
-          <Route path="*" element={<Navigate to={session ? defaultAppRoute : "/auth"} replace />} />
+          <Route path="*" element={<Navigate to={session ? defaultAppRoute : "/"} replace />} />
         </Routes>
       </BrowserRouter>
     </div>
