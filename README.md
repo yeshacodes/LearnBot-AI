@@ -75,7 +75,7 @@ It uses **Retrieval-Augmented Generation (RAG)** to provide accurate, context-aw
 
 ## 🔗 Links
 
-* 🌐 Live App:
+* 🌐 Live App: https://learn-bot-ai.vercel.app/
 * 💻 GitHub Repo: https://github.com/yeshacodes/learnbot-ai
 
 ---
