@@ -1,21 +1,31 @@
 :root {
-  --bg: #fff7fa;
+  --bg: #fff5f7;
   --surface: #ffffff;
-  --surface2: #fff1f6;
-  --border: #f3d0df;
-  --text: #111827;
-  --muted: #6b7280;
-  --accent: #e84a8a;
+  --surface2: #ffffff;
+  --border: #000000;
+  --text: #000000;
+  --muted: #000000;
+  --accent: #ff006e;
+  --secondary: #00f5ff;
+  --yellow: #ffd60a;
+  --purple: #8338ec;
+  --green: #39FF14;
+  --shadow: rgba(0, 0, 0, 1);
 }
 
 .dark {
-  --bg: #0b1220;
-  --surface: #111a2e;
-  --surface2: #0f172a;
-  --border: #24324a;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
-  --accent: #ff4da6;
+  --bg: #000000;
+  --surface: #1A1A1A;
+  --surface2: #111111;
+  --border: #000000;
+  --text: #FFFFFF;
+  --muted: #A0A0A0;
+  --accent: #FF4FA3;
+  --secondary: #00E5FF;
+  --yellow: #FFD84D;
+  --purple: #A78BFA;
+  --green: #39FF14;
+  --shadow: rgba(0, 0, 0, 1);
 }
 
 html,
@@ -25,7 +35,7 @@ body,
 }
 
 body {
-  font-family: "Plus Jakarta Sans", sans-serif;
+  font-family: "Inter", sans-serif;
   background: var(--bg);
   color: var(--text);
 }

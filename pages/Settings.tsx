@@ -33,39 +33,39 @@ const Settings: React.FC<SettingsProps> = ({ user, isDarkMode, toggleDarkMode })
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div>
-        <h1 className="text-2xl font-bold text-primary">Account Settings</h1>
-        <p className="text-muted">Manage your account preferences.</p>
+        <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">Account Settings</h1>
+        <p className="text-primary font-bold mt-2">Manage your account preferences.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="p-6">
-          <h3 className="font-bold text-primary mb-1">Theme</h3>
-          <p className="text-sm text-muted mb-6">Toggle dark mode.</p>
+        <Card className="p-8">
+          <h3 className="text-xl font-heading font-black text-primary uppercase mb-1">Theme</h3>
+          <p className="text-sm text-primary font-bold mb-6">Toggle dark mode.</p>
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-surface2 text-accent rounded-lg">
-                {isDarkMode ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-card border-[3px] border-default rounded-xl text-primary shadow-sm">
+                {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
               </div>
-              <span className="text-sm font-medium text-primary">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+              <span className="text-[14px] font-black uppercase text-primary">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
             </div>
             <button
               onClick={toggleDarkMode}
-              className="w-11 h-6 rounded-full p-1 transition-colors bg-surface2 border border-default"
+              className="w-14 h-8 rounded-full p-1 transition-colors bg-card border-[3px] border-default shadow-brutal flex items-center"
             >
-              <div className={`w-4 h-4 bg-accent rounded-full transition-transform ${isDarkMode ? 'translate-x-5' : 'translate-x-0'}`}></div>
+              <div className={`w-5 h-5 bg-primary rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
             </button>
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="font-bold text-primary mb-1">Account</h3>
-          <p className="text-sm text-muted mb-6">Signed in as {user?.email ?? 'unknown@example.com'}</p>
-          <Button onClick={handleLogout} disabled={isSigningOut} className="inline-flex items-center gap-2">
-            <LogOut className="w-4 h-4" />
+        <Card className="p-8">
+          <h3 className="text-xl font-heading font-black text-primary uppercase mb-1">Account</h3>
+          <p className="text-sm text-primary font-bold mb-6">Signed in as {user?.email ?? 'unknown@example.com'}</p>
+          <Button onClick={handleLogout} disabled={isSigningOut} className="inline-flex items-center gap-2 !bg-accent !text-black">
+            <LogOut className="w-5 h-5" />
             {isSigningOut ? 'Signing Out...' : 'Logout'}
           </Button>
           {logoutError && (
-            <p className="text-sm mt-3" style={{ color: 'red' }}>
+            <p className="text-sm mt-3 font-bold text-accent">
               {logoutError}
             </p>
           )}

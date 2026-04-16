@@ -10,9 +10,13 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'],
+        heading: ['Fredoka', 'sans-serif'],
+      },
       colors: {
         background: "var(--bg)",
-        sidebar: "var(--surface)",
+        sidebar: "var(--surface2)",
         card: "var(--surface)",
         surface: "var(--surface)",
         surface2: "var(--surface2)",
@@ -20,8 +24,19 @@ export default {
         primary: "var(--text)",
         muted: "var(--muted)",
         accent: "var(--accent)",
+        secondary: "var(--secondary)",
+        yellow: "var(--yellow)",
+        purple: "var(--purple)",
+        green: "var(--green)",
         "hover-bg": "var(--surface2)",
       },
+      borderWidth: {
+        '3': '3px',
+      },
+      boxShadow: {
+        'brutal': '6px 6px 0px 0px var(--shadow)',
+        'brutal-lg': '8px 8px 0px 0px var(--shadow)',
+      }
     },
   },
   plugins: [],

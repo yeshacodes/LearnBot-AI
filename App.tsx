@@ -58,7 +58,7 @@ const App: React.FC = () => {
   const defaultAppRoute = AppRoute.CHAT;
 
   return (
-    <div className="min-h-screen bg-pink-50 dark:bg-[#0b1220] text-primary">
+    <div className="min-h-screen bg-background dark:bg-[#000000] text-primary">
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}

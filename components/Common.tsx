@@ -7,13 +7,13 @@ export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { 
   className = '', 
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center px-6 py-3 rounded-2xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent active:scale-[0.97]";
+  const baseStyles = "inline-flex items-center justify-center px-6 py-3 rounded-2xl font-black transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-[15px] focus:outline-none active:scale-[0.97] border-[3px] border-default shadow-brutal hover:-translate-y-1 hover:shadow-brutal-lg";
   const variants = {
-    primary: "bg-accent text-white hover:opacity-90 border border-accent/30 shadow-sm",
-    secondary: "bg-card dark:bg-[var(--surface)] text-primary hover:bg-surface2 dark:hover:bg-[var(--surface2)] border border-default dark:border-[var(--border)] shadow-sm",
-    danger: "bg-surface2 dark:bg-[var(--surface2)] text-primary hover:opacity-90 border border-default dark:border-[var(--border)] shadow-sm",
-    outline: "border-2 border-default dark:border-[var(--border)] text-primary hover:bg-surface2 dark:hover:bg-[var(--surface2)]",
-    ghost: "bg-transparent text-primary hover:bg-surface2 dark:hover:bg-[var(--surface2)]"
+    primary: "bg-accent text-black",
+    secondary: "bg-secondary text-black",
+    danger: "bg-[#FF3366] text-black",
+    outline: "bg-card text-primary",
+    ghost: "bg-yellow text-black"
   };
 
   return (
@@ -24,12 +24,7 @@ export const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { 
 };
 
 export const Card: React.FC<{ children: React.ReactNode; className?: string; glass?: boolean }> = ({ children, className = '', glass = false }) => (
-  <div className={`
-    ${glass 
-      ? 'bg-card/90 dark:bg-[var(--surface)]/90 backdrop-blur-2xl border-default dark:border-[var(--border)]' 
-      : 'bg-card dark:bg-[var(--surface)] border-default dark:border-[var(--border)]'} 
-    border rounded-[2.5rem] shadow-[0_10px_30px_rgba(17,24,39,0.08)] ${className}
-  `}>
+  <div className={`bg-card dark:bg-gradient-to-b dark:from-surface dark:to-surface2 border-[4px] border-default rounded-[2.5rem] shadow-brutal ${className}`}>
     {children}
   </div>
 );
@@ -41,30 +36,29 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
   ...props 
 }) => (
   <div className="space-y-2 w-full">
-    {label && <label className="text-[11px] font-black text-muted uppercase tracking-[0.2em] ml-2">{label}</label>}
+    {label && <label className="text-[12px] font-black text-primary uppercase tracking-[0.2em] ml-2">{label}</label>}
     <input 
       className={`
-        w-full px-5 py-4 bg-card dark:bg-surface2 border-2 ${error ? 'border-accent' : 'border-default dark:border-[var(--border)]'} 
-        rounded-2xl focus:border-accent transition-all outline-none text-primary placeholder:text-muted
+        w-full px-5 py-4 bg-card border-[3px] border-default rounded-xl focus:border-accent focus:ring-0 transition-all outline-none text-primary font-bold placeholder-muted
         ${className}
       `}
       {...props}
     />
-    {error && <p className="text-xs text-accent ml-2 font-bold">{error}</p>}
+    {error && <p className="text-xs text-accent ml-2 font-black">{error}</p>}
   </div>
 );
 
 export const Badge: React.FC<{ children: React.ReactNode; color?: 'green' | 'blue' | 'red' | 'gray' | 'purple' | 'orange' }> = ({ children, color = 'gray' }) => {
   const colors = {
-    green: "bg-accent/15 text-accent border border-accent/30",
-    blue: "bg-card dark:bg-[var(--surface)] text-primary border border-default dark:border-[var(--border)]",
-    purple: "bg-surface2 dark:bg-[var(--surface2)] text-primary border border-default dark:border-[var(--border)]",
-    orange: "bg-surface2 dark:bg-[var(--surface2)] text-primary border border-default dark:border-[var(--border)]",
-    red: "bg-accent/15 text-accent border border-accent/30",
-    gray: "bg-card dark:bg-[var(--surface)] text-muted border border-default dark:border-[var(--border)]"
+    green: "bg-accent text-black",
+    blue: "bg-secondary text-black",
+    purple: "bg-purple text-black",
+    orange: "bg-yellow text-black",
+    red: "bg-[#FF3366] text-black",
+    gray: "bg-card text-primary"
   };
   return (
-    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${colors[color]}`}>
+    <span className={`px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border-[3px] border-default ${colors[color]}`}>
       {children}
     </span>
   );

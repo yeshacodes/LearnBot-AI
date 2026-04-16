@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Sparkles, RotateCw, ChevronLeft, ChevronRight, Library, X } from 'lucide-react';
 import { Button, Card, Badge, Input } from '../components/Common';
 import { Flashcard, Source } from '../types';
@@ -188,16 +188,16 @@ const FlashcardsPage: React.FC = () => {
     <div className="space-y-16 animate-in fade-in duration-700 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-8">
         <div>
-          <h1 className="text-5xl font-black text-primary tracking-tighter uppercase mb-3">Study Cards</h1>
-          <p className="text-muted font-bold text-sm tracking-[0.2em] uppercase">Solidify your memory through recall.</p>
+          <h1 className="text-5xl font-heading font-black text-primary dark:text-white tracking-tighter uppercase mb-3">STUDY <span className="text-secondary dark:text-[#00E5FF]">CARDS</span></h1>
+          <p className="text-secondary dark:text-[#7FE7F2] font-bold text-[13px] tracking-[0.2em] uppercase">Solidify your memory through recall.</p>
         </div>
         <div className="flex gap-4">
-          <Button variant="secondary" onClick={openDecksModal} className="!rounded-[2rem] !px-8 !py-4 !text-[11px] !uppercase !tracking-widest">
-            <Library className="w-5 h-5 mr-3" />
+          <Button variant="secondary" onClick={openDecksModal} className="!rounded-[2rem] !px-8 !py-4 !text-[12px] !uppercase !tracking-widest">
+            <Library className="w-5 h-5 mr-3 text-black" />
             My Decks
           </Button>
-          <Button onClick={() => setShowGenerateModal(true)} disabled={isGenerating} className="!rounded-[2rem] !px-8 !py-4 !text-[11px] !uppercase !tracking-widest !bg-accent !text-white">
-            <Sparkles className={`w-5 h-5 mr-3 ${isGenerating ? 'animate-spin' : ''}`} />
+          <Button onClick={() => setShowGenerateModal(true)} disabled={isGenerating} className="!rounded-[2rem] !px-8 !py-4 !text-[12px] !uppercase !tracking-widest !bg-accent !text-black dark:!bg-[#FF4FA3] dark:hover:!bg-[#ff69b4] transition-transform hover:!-translate-y-[2px]">
+            <Sparkles className={`w-5 h-5 mr-3 text-black ${isGenerating ? 'animate-spin' : ''}`} />
             {isGenerating ? 'Synthesizing...' : 'Smart New'}
           </Button>
         </div>
@@ -216,11 +216,11 @@ const FlashcardsPage: React.FC = () => {
       )}
 
       {currentDeck && (
-        <div className="flex items-center justify-between gap-4 bg-card border border-default rounded-[2rem] px-6 py-4">
+        <div className="flex items-center justify-between gap-4 bg-card border-[4px] border-default shadow-brutal rounded-[2rem] px-8 py-5">
           <div>
-            <p className="text-[10px] font-black text-muted uppercase tracking-widest">Current Deck</p>
-            <h2 className="text-xl font-black text-primary tracking-tight">{currentDeck.name}</h2>
-            <p className="text-sm text-muted">{currentDeck.source_title || 'Custom deck'} · {totalCards} cards</p>
+            <p className="text-[12px] font-black text-primary uppercase tracking-widest">Current Deck</p>
+            <h2 className="text-2xl font-heading font-black text-primary tracking-tight mt-1">{currentDeck.name}</h2>
+            <p className="text-sm text-primary font-bold mt-1">{currentDeck.source_title || 'Custom deck'} · {totalCards} cards</p>
           </div>
           <Badge color="blue">Page {page} / {totalPages}</Badge>
         </div>
@@ -229,57 +229,50 @@ const FlashcardsPage: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {loadingCards ? (
           Array.from({ length: 3 }).map((_, idx) => (
-            <Card key={idx} className="h-80 animate-pulse !rounded-[3rem]" />
+            <Card key={idx} className="h-[22rem] animate-pulse !rounded-[3rem]" />
           ))
         ) : cards.length > 0 ? (
           cards.map((card, idx) => (
             <div
               key={card.id}
-              className="perspective-1000 h-80 cursor-pointer group animate-in slide-in-from-bottom-6 duration-500"
+              className="perspective-1000 h-[22rem] cursor-pointer group animate-in slide-in-from-bottom-6 duration-500"
               style={{ animationDelay: `${idx * 120}ms` }}
               onClick={() => toggleFlip(card.id)}
             >
               <div className={`relative w-full h-full transition-all duration-700 preserve-3d ${flipped[card.id] ? 'rotate-y-180' : ''}`}>
                 <div className="absolute inset-0 backface-hidden">
-                  <Card className="h-full flex flex-col p-10 backdrop-blur-xl !rounded-[3rem] border-none shadow-xl shadow-black/10 group-hover:translate-y-[-6px] transition-transform">
-                    <div className="flex justify-between items-start mb-8">
+                  <Card className="h-full flex flex-col p-10 bg-card !rounded-[3rem] border-[4px] border-default shadow-brutal group-hover:-translate-y-2 group-hover:shadow-brutal-lg transition-all">
+                    <div className="flex justify-between items-center shrink-0 mb-4">
                       <Badge color="blue">Question</Badge>
-                      <div className="p-3 bg-surface2 rounded-2xl">
-                        <RotateCw className="w-4 h-4 text-accent" />
+                      <div className="p-3 bg-card border-[3px] border-default rounded-2xl">
+                        <RotateCw className="w-5 h-5 text-primary" />
                       </div>
                     </div>
-                    <div className="flex-1 min-h-0 flex items-center justify-center text-center px-2">
-                      <p className="text-xl font-black text-primary leading-tight uppercase tracking-tight break-words">
+                    <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center px-2 py-4 overflow-hidden">
+                      <p className="text-xl font-bold font-heading text-primary leading-snug uppercase tracking-tight break-words line-clamp-5 w-full">
                         {card.question}
                       </p>
                     </div>
-                    <div className="mt-6 min-h-[1.25rem] flex items-center justify-center">
-                      {card.tags.length > 0 && (
-                        <span className="text-[10px] text-muted font-black uppercase tracking-widest">
-                          Tags {card.tags.length}
-                        </span>
-                      )}
+                    <div className="mt-auto shrink-0 min-h-[1.25rem] flex items-center justify-center pt-2 text-transparent select-none">
                     </div>
                   </Card>
                 </div>
 
                 <div className="absolute inset-0 backface-hidden rotate-y-180">
-                  <Card className="h-full !bg-surface2 !rounded-[3rem] border-none shadow-2xl shadow-black/10">
+                  <Card className="h-full bg-card dark:!bg-[#151515] !rounded-[3rem] border-[4px] dark:border-[1px] border-default dark:border-[#2A2A2A] shadow-brutal dark:shadow-none">
                     <div className="h-full flex flex-col p-10">
-                    <div className="flex justify-between items-start mb-6">
+                    <div className="flex justify-between items-center shrink-0 mb-4">
                       <Badge color="orange">Answer</Badge>
-                      <RotateCw className="w-4 h-4 text-muted" />
+                      <RotateCw className="w-5 h-5 text-black dark:text-[#F3F4F6]" />
                     </div>
-                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3">
-                      <div className="min-h-full flex flex-col justify-center text-center">
-                        <p className="text-base font-bold text-primary leading-relaxed italic break-words">
-                          &quot;{card.answer}&quot;
-                        </p>
-                      </div>
+                    <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 custom-scrollbar flex flex-col justify-center text-center">
+                      <p className="text-lg font-bold text-black dark:text-white leading-snug italic break-words w-full">
+                        &quot;{card.answer}&quot;
+                      </p>
                     </div>
-                    <div className="mt-8 flex gap-3">
-                      <button className="flex-1 py-4 bg-card dark:bg-surface text-primary rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest shadow-sm border border-default">Archive</button>
-                      <button className="flex-1 py-4 bg-accent text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest shadow-lg shadow-accent/20">Keep</button>
+                    <div className="mt-auto shrink-0 flex gap-3 pt-2">
+                      <button className="flex-1 py-4 bg-card dark:bg-[#1A1A1A] text-primary dark:text-white hover:text-black dark:hover:text-[#00E5FF] rounded-[1.5rem] text-[12px] font-black uppercase tracking-widest border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] hover:-translate-y-1 dark:hover:-translate-y-0 hover:bg-accent/20 dark:hover:bg-[#222222] hover:shadow-brutal dark:shadow-none dark:hover:shadow-none transition-all">Archive</button>
+                      <button className="flex-1 py-4 bg-accent dark:bg-[#FF4FA3] text-black rounded-[1.5rem] text-[12px] font-black uppercase tracking-widest border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] dark:shadow-none hover:-translate-y-1 dark:hover:-translate-y-[2px] dark:hover:bg-[#ff69b4] hover:shadow-brutal dark:hover:shadow-none transition-all">Keep</button>
                     </div>
                     </div>
                   </Card>
@@ -289,9 +282,9 @@ const FlashcardsPage: React.FC = () => {
           ))
         ) : (
           <div className="col-span-full">
-            <Card className="p-12 text-center !rounded-[3rem]">
-              <p className="text-xl font-black text-primary">No study cards yet</p>
-              <p className="text-muted mt-3">Generate a deck from an uploaded source to get started.</p>
+            <Card className="p-12 text-center !rounded-[3rem] bg-card dark:!bg-[#111111] border-[4px] dark:border-[2px] border-default dark:border-[#2A2A2A] shadow-brutal dark:shadow-none dark:bg-gradient-to-b dark:from-[#1A1A1A] dark:to-[#111111]">
+              <p className="text-2xl font-heading font-black text-primary dark:text-[#FF4FA3] uppercase">NO STUDY CARDS YET</p>
+              <p className="text-primary dark:text-white font-bold mt-4">Generate a deck from an uploaded source to get started.</p>
             </Card>
           </div>
         )}
@@ -301,7 +294,7 @@ const FlashcardsPage: React.FC = () => {
         <button
           onClick={() => currentDeck && page > 1 && fetchDeckCards(currentDeck.id, page - 1)}
           disabled={!currentDeck || page <= 1 || loadingCards}
-          className="p-4 bg-card text-muted hover:text-primary rounded-2xl shadow-sm border border-default transition-all disabled:opacity-50"
+          className="p-4 bg-card dark:bg-[#151515] text-primary dark:text-white hover:bg-accent/20 dark:hover:bg-[#222222] hover:text-accent dark:hover:text-[#00E5FF] rounded-2xl border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] shadow-brutal dark:shadow-none hover:-translate-y-1 dark:hover:translate-y-0 transition-all disabled:opacity-50 disabled:translate-y-0 hover:shadow-[0_0_0_2px_rgba(0,229,255,0.18)]"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
@@ -312,7 +305,7 @@ const FlashcardsPage: React.FC = () => {
               <button
                 key={pageNumber}
                 onClick={() => currentDeck && fetchDeckCards(currentDeck.id, pageNumber)}
-                className={`w-14 h-14 rounded-2xl flex items-center justify-center text-sm font-black transition-all ${page === pageNumber ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'text-muted hover:bg-card hover:text-primary'}`}
+                className={`w-14 h-14 rounded-2xl flex items-center justify-center text-[15px] font-black transition-all border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] dark:shadow-none ${page === pageNumber ? 'bg-accent dark:bg-[#FF4FA3] text-black shadow-brutal translate-x-1 -translate-y-1' : 'bg-card dark:bg-[#151515] text-primary dark:text-white hover:text-accent dark:hover:text-[#00E5FF] hover:bg-accent/20 dark:hover:bg-[#222222] hover:-translate-y-1 dark:hover:translate-y-0 hover:shadow-brutal hover:shadow-[0_0_0_2px_rgba(0,229,255,0.18)]'}`}
               >
                 {pageNumber}
               </button>
@@ -322,31 +315,31 @@ const FlashcardsPage: React.FC = () => {
         <button
           onClick={() => currentDeck && page < totalPages && fetchDeckCards(currentDeck.id, page + 1)}
           disabled={!currentDeck || page >= totalPages || loadingCards}
-          className="p-4 bg-card text-muted hover:text-primary rounded-2xl shadow-sm border border-default transition-all disabled:opacity-50"
+          className="p-4 bg-card dark:bg-[#151515] text-primary dark:text-white hover:text-accent dark:hover:text-[#00E5FF] hover:bg-accent/20 dark:hover:bg-[#222222] rounded-2xl border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] shadow-brutal dark:shadow-none hover:-translate-y-1 dark:hover:translate-y-0 transition-all disabled:opacity-50 disabled:translate-y-0 hover:shadow-[0_0_0_2px_rgba(0,229,255,0.18)]"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
       </div>
 
       {showGenerateModal && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-6">
-          <Card className="w-full max-w-xl p-8 !rounded-[2.5rem]">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
+          <Card className="w-full max-w-xl p-8 !rounded-[2.5rem] bg-card border-[4px] border-default shadow-brutal-lg">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-2xl font-black text-primary uppercase tracking-tight">Generate Deck</h3>
-                <p className="text-muted text-sm mt-1">Choose a source and create a new flashcard deck.</p>
+                <h3 className="text-3xl font-heading font-black text-primary uppercase tracking-tight">Generate Deck</h3>
+                <p className="text-primary font-bold text-sm mt-2">Choose a source and create a new flashcard deck.</p>
               </div>
-              <button type="button" onClick={() => setShowGenerateModal(false)} className="p-3 rounded-2xl hover:bg-surface2">
-                <X className="w-5 h-5" />
+              <button type="button" onClick={() => setShowGenerateModal(false)} className="p-3 rounded-2xl bg-card dark:bg-[#151515] border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] dark:shadow-none text-primary dark:text-white hover:text-black dark:hover:text-[#00E5FF] hover:-translate-y-1 dark:hover:translate-y-0 hover:shadow-brutal hover:bg-accent/10 dark:hover:bg-[#222222] transition-all">
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div>
-                <label className="text-[11px] font-black text-muted uppercase tracking-[0.2em] ml-2">Source</label>
+                <label className="text-[12px] font-black text-primary uppercase tracking-[0.2em] ml-2">Source</label>
                 <select
                   value={selectedSourceId}
                   onChange={(e) => setSelectedSourceId(e.target.value)}
-                  className="w-full mt-2 px-5 py-4 bg-card border-2 border-default rounded-2xl outline-none text-primary"
+                  className="w-full mt-2 px-5 py-4 bg-card border-[3px] border-default rounded-xl outline-none text-primary font-bold focus:border-accent"
                   disabled={loadingSources}
                 >
                   <option value="">Select a source</option>
@@ -354,7 +347,7 @@ const FlashcardsPage: React.FC = () => {
                     <option key={source.id} value={source.id}>{source.name}</option>
                   ))}
                 </select>
-                {loadingSources && <p className="text-xs text-muted mt-2">Loading sources...</p>}
+                {loadingSources && <p className="text-xs text-primary font-bold mt-2">Loading sources...</p>}
               </div>
               <Input label="Deck Name" placeholder={selectedSourceName} value={deckName} onChange={(e) => setDeckName(e.target.value)} />
               <Input label="Number of Cards" type="number" min={1} max={50} value={numCards} onChange={(e) => setNumCards(e.target.value)} />
@@ -370,22 +363,22 @@ const FlashcardsPage: React.FC = () => {
       )}
 
       {showDecksModal && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-6">
-          <Card className="w-full max-w-2xl p-8 !rounded-[2.5rem]">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6">
+          <Card className="w-full max-w-2xl p-8 !rounded-[2.5rem] bg-card border-[4px] border-default shadow-brutal-lg">
+            <div className="flex items-center justify-between mb-8">
               <div>
-                <h3 className="text-2xl font-black text-primary uppercase tracking-tight">My Decks</h3>
-                <p className="text-muted text-sm mt-1">Open an existing deck.</p>
+                <h3 className="text-3xl font-heading font-black text-primary uppercase tracking-tight">My Decks</h3>
+                <p className="text-primary font-bold text-sm mt-2">Open an existing deck.</p>
               </div>
-              <button type="button" onClick={() => setShowDecksModal(false)} className="p-3 rounded-2xl hover:bg-surface2">
-                <X className="w-5 h-5" />
+              <button type="button" onClick={() => setShowDecksModal(false)} className="p-3 rounded-2xl bg-card dark:bg-[#151515] border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] dark:shadow-none text-primary dark:text-white hover:-translate-y-1 dark:hover:translate-y-0 hover:shadow-brutal hover:bg-accent/10 dark:hover:bg-[#222222] hover:text-black dark:hover:text-[#00E5FF] transition-all">
+                <X className="w-6 h-6" />
               </button>
             </div>
-            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-4 max-h-[420px] overflow-y-auto pr-2 custom-scrollbar">
               {loadingDecks ? (
-                <p className="text-sm text-muted">Loading decks...</p>
+                <p className="text-sm font-bold text-primary">Loading decks...</p>
               ) : decks.length === 0 ? (
-                <p className="text-sm text-muted">No decks yet.</p>
+                <p className="text-sm font-bold text-primary">No decks yet.</p>
               ) : (
                 decks.map((deck) => (
                   <button
@@ -395,12 +388,12 @@ const FlashcardsPage: React.FC = () => {
                       setShowDecksModal(false);
                       await fetchDeckCards(deck.id, 1);
                     }}
-                    className="w-full text-left p-5 rounded-[2rem] border border-default bg-card hover:bg-surface2 transition-all"
+                    className="w-full text-left p-6 rounded-[2rem] border-[3px] dark:border-[1px] border-default dark:border-[#2A2A2A] bg-card dark:bg-[#151515] shadow-sm dark:shadow-none hover:-translate-y-1 dark:hover:translate-y-0 hover:shadow-[4px_4px_0px_0px_var(--shadow)] dark:hover:shadow-none transition-all hover:bg-accent/10 dark:hover:bg-[#222222] hover:text-black dark:text-white dark:hover:text-white text-primary group"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div>
-                        <p className="text-sm font-black text-primary uppercase tracking-tight">{deck.name}</p>
-                        <p className="text-xs text-muted mt-1">{deck.source_title || 'Custom deck'} · {deck.card_count} cards</p>
+                        <p className="text-base font-heading font-black uppercase tracking-tight group-hover:text-black dark:group-hover:text-[#00E5FF]">{deck.name}</p>
+                        <p className="text-xs font-bold mt-1 group-hover:text-black/80">{deck.source_title || 'Custom deck'} · {deck.card_count} cards</p>
                       </div>
                       <Badge color="blue">{new Date(deck.created_at).toLocaleDateString()}</Badge>
                     </div>

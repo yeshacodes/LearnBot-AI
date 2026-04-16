@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, FileText, Loader2, Sparkles } from 'lucide-react';
 import { Card, Badge } from '../components/Common';
@@ -157,27 +157,27 @@ const Chat: React.FC = () => {
           <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
             <button
               onClick={() => setSelectedSourceIds([])}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 ${selectedSourceIds.length === 0
-                ? 'bg-card text-primary shadow-lg shadow-accent/20 border border-default'
-                : 'bg-card/70 text-muted hover:bg-surface2 border border-transparent'}`}
+              className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 border-[3px] border-default shadow-[4px_4px_0px_0px_var(--shadow)] ${selectedSourceIds.length === 0
+                ? 'bg-yellow text-black translate-x-1 translate-y-1 shadow-none'
+                : 'bg-card text-primary hover:text-black hover:bg-yellow hover:-translate-y-1 hover:shadow-brutal'}`}
             >
-              <div className={`p-2 rounded-xl ${selectedSourceIds.length === 0 ? 'bg-surface2' : 'bg-surface2/80'}`}>
-                <Sparkles className="w-4 h-4 text-accent" />
+              <div className={`p-2 rounded-xl border-[2px] border-default bg-card`}>
+                <Sparkles className="w-5 h-5 text-current" />
               </div>
-              <span className="text-[11px] font-black truncate uppercase tracking-widest">All Sources</span>
+              <span className="text-[12px] font-black truncate uppercase tracking-widest text-current">All Sources</span>
             </button>
             {sources.map(source => (
               <button
                 key={source.id}
                 onClick={() => toggleSourceSelection(source.id)}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 ${selectedSourceIds.includes(source.id)
-                  ? 'bg-card text-primary shadow-lg shadow-accent/20 border border-default' 
-                  : 'bg-card/70 text-muted hover:bg-surface2 border border-transparent'}`}
+                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 border-[3px] border-default shadow-[4px_4px_0px_0px_var(--shadow)] ${selectedSourceIds.includes(source.id)
+                  ? 'bg-yellow text-black translate-x-1 translate-y-1 shadow-none' 
+                  : 'bg-card text-primary hover:text-black hover:bg-yellow hover:-translate-y-1 hover:shadow-brutal'}`}
               >
-                <div className={`p-2 rounded-xl ${selectedSourceIds.includes(source.id) ? 'bg-surface2' : 'bg-surface2/80'}`}>
-                  <FileText className="w-4 h-4 text-accent" />
+                <div className={`p-2 rounded-xl border-[2px] border-default bg-card`}>
+                  <FileText className="w-5 h-5 text-current" />
                 </div>
-                <span className="text-[11px] font-black truncate uppercase tracking-widest">{source.name}</span>
+                <span className="text-[12px] font-black truncate uppercase tracking-widest text-current">{source.name}</span>
               </button>
             ))}
             {sourcesLoading && <div className="px-4 text-[11px] text-muted font-bold uppercase tracking-widest">Loading sources...</div>}
@@ -193,10 +193,10 @@ const Chat: React.FC = () => {
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] ${msg.role === 'user' ? 'flex flex-col items-end' : 'flex gap-5'}`}>
                 <div className={`
-                  px-8 py-5 rounded-[2.5rem] shadow-sm font-medium text-[15px] leading-relaxed
+                  px-8 py-5 rounded-[2.5rem] font-bold text-[15px] leading-relaxed border-[3px] border-default shadow-brutal
                   ${msg.role === 'user' 
-                    ? 'bg-accent text-white rounded-tr-none border border-accent' 
-                    : 'bg-surface2 text-primary rounded-tl-none border border-default shadow-inner'}
+                    ? 'bg-secondary text-black rounded-tr-none' 
+                    : 'bg-card text-primary rounded-tl-none'}
                 `}>
                   {msg.content}
                 </div>
@@ -208,8 +208,8 @@ const Chat: React.FC = () => {
           ))}
           {isLoading && (
             <div className="flex justify-start">
-              <div className="bg-surface2 px-8 py-5 rounded-[2.5rem] rounded-tl-none border border-default">
-                <Loader2 className="w-5 h-5 animate-spin text-accent" />
+              <div className="bg-card px-8 py-5 rounded-[2.5rem] rounded-tl-none border-[3px] border-default shadow-brutal">
+                <Loader2 className="w-5 h-5 animate-spin text-primary" />
               </div>
             </div>
           )}
@@ -222,7 +222,7 @@ const Chat: React.FC = () => {
               contextCollapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-60 opacity-100'
             }`}
           >
-            <Card className="p-4 border border-default !rounded-[1.8rem]">
+            <Card className="p-4 !rounded-[1.8rem]">
               <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-3">
                 Sources for this chat
               </p>
@@ -231,10 +231,10 @@ const Chat: React.FC = () => {
                   <button
                     key={`picker-${source.id}`}
                     onClick={() => toggleSourceSelection(source.id)}
-                    className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                    className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest border-[3px] border-default shadow-sm transition-all ${
                       selectedSourceIds.includes(source.id)
-                        ? 'bg-accent text-white border-accent'
-                        : 'bg-surface2 text-muted border-default'
+                        ? 'bg-accent text-black translate-y-1 shadow-none'
+                        : 'bg-card text-primary hover:text-black hover:-translate-y-1 hover:bg-yellow hover:shadow-brutal'
                     }`}
                   >
                     {source.name}
@@ -245,11 +245,11 @@ const Chat: React.FC = () => {
             </Card>
           </div>
           {chatError && <div className="px-3 pb-3 text-sm" style={{ color: "red" }}>{chatError}</div>}
-          <Card className="p-2 border-none !bg-card backdrop-blur-3xl shadow-2xl shadow-black/10 !rounded-[2.8rem]">
+          <Card className="p-2 !bg-card !rounded-[2.8rem]">
             <div className="flex items-center gap-3 p-1">
               <input 
                 placeholder="Ask your assistant anything..." 
-                className="flex-1 px-8 py-5 bg-transparent text-primary placeholder:text-muted outline-none font-bold text-sm"
+                className="flex-1 px-8 py-5 bg-transparent text-primary placeholder:text-muted outline-none font-bold text-[15px]"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -257,9 +257,9 @@ const Chat: React.FC = () => {
               />
               <button 
                 onClick={handleSendMessage} 
-                className={`p-5 rounded-[2.2rem] transition-all ${!inputValue.trim() || isLoading ? 'bg-surface2 text-muted' : 'bg-accent text-white hover:scale-105 active:scale-95 shadow-md shadow-accent/30'}`}
+                className={`p-5 rounded-[2.2rem] border-[3px] border-default transition-all ${!inputValue.trim() || isLoading ? 'bg-surface2 text-muted' : 'bg-accent text-black shadow-[4px_4px_0px_0px_var(--shadow)] hover:-translate-y-1 hover:shadow-brutal active:translate-y-1 active:shadow-none'}`}
               >
-                <Send className="w-6 h-6" />
+                <Send className="w-6 h-6 text-black" />
               </button>
             </div>
           </Card>

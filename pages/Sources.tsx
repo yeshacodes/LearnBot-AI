@@ -61,8 +61,8 @@ const Sources: React.FC = () => {
     <div className="space-y-10 animate-in fade-in duration-700">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
-          <h1 className="text-4xl font-black text-primary tracking-tighter uppercase">Knowledge Bank</h1>
-          <p className="text-muted font-bold text-xs tracking-widest mt-1">Manage your active learning context.</p>
+          <h1 className="text-5xl font-heading font-black text-primary tracking-tighter uppercase">Knowledge <span className="text-accent">Bank</span></h1>
+          <p className="text-secondary font-bold text-[13px] tracking-widest mt-2 uppercase">Manage your active learning context.</p>
         </div>
         <div className="w-full sm:w-80">
           <Input 
@@ -74,49 +74,49 @@ const Sources: React.FC = () => {
         </div>
       </div>
 
-      <Card className="!rounded-[2.5rem] border-none shadow-2xl shadow-black/10 overflow-hidden">
-        {sourcesLoading && <div className="px-8 py-4">Loading sources...</div>}
-        {sourcesError && <div className="px-8 py-4" style={{ color: "red" }}>{sourcesError}</div>}
+      <Card className="!rounded-[2.5rem] bg-card border-[4px] border-default shadow-brutal-lg overflow-hidden">
+        {sourcesLoading && <div className="px-8 py-6 font-bold text-primary">Loading sources...</div>}
+        {sourcesError && <div className="px-8 py-6 font-bold" style={{ color: "red" }}>{sourcesError}</div>}
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-surface2">
-                <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Source</th>
-                <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Format</th>
-                <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Added On</th>
-                <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest">Status</th>
-                <th className="px-8 py-5 text-[10px] font-black text-muted uppercase tracking-widest text-right">Action</th>
+              <tr className="bg-yellow border-b-[4px] border-default">
+                <th className="px-8 py-6 text-[12px] font-black text-black uppercase tracking-widest">Source</th>
+                <th className="px-8 py-6 text-[12px] font-black text-black uppercase tracking-widest">Format</th>
+                <th className="px-8 py-6 text-[12px] font-black text-black uppercase tracking-widest">Added On</th>
+                <th className="px-8 py-6 text-[12px] font-black text-black uppercase tracking-widest">Status</th>
+                <th className="px-8 py-6 text-[12px] font-black text-black uppercase tracking-widest text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-default">
+            <tbody className="divide-y-[3px] divide-default">
               {filteredSources.map((source) => (
                 <tr key={source.id} className="hover:bg-surface2 transition-colors group">
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-2xl ${source.type === 'pdf' ? 'bg-surface2 text-accent' : 'bg-surface2 text-accent'}`}>
-                        {source.type === 'pdf' ? <FileText className="w-5 h-5" /> : <Globe className="w-5 h-5" />}
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-5">
+                      <div className="p-3 rounded-2xl bg-card border-[3px] border-default shadow-sm text-primary group-hover:bg-purple group-hover:text-black group-hover:-translate-y-1 transition-all">
+                        {source.type === 'pdf' ? <FileText className="w-6 h-6 text-current" /> : <Globe className="w-6 h-6 text-current" />}
                       </div>
-                      <span className="text-sm font-bold text-primary truncate max-w-xs">{source.name}</span>
+                      <span className="text-base font-black font-heading uppercase text-primary truncate max-w-xs">{source.name}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
                     <Badge color={source.type === 'pdf' ? 'purple' : 'blue'}>{source.type}</Badge>
                   </td>
-                  <td className="px-8 py-5">
-                    <span className="text-xs font-bold text-muted">{source.date}</span>
+                  <td className="px-8 py-6">
+                    <span className="text-[13px] font-bold text-primary">{source.date}</span>
                   </td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${source.status === 'ready' ? 'bg-accent animate-pulse' : 'bg-muted/60'}`}></div>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-muted">{source.status}</span>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full border-2 border-default ${source.status === 'ready' ? 'bg-accent animate-pulse' : 'bg-surface2'}`}></div>
+                      <span className="text-[12px] font-black uppercase tracking-widest text-primary">{source.status}</span>
                     </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
+                  <td className="px-8 py-6 text-right">
                     <button 
                       onClick={() => handleDelete(source.id)}
-                      className="p-3 text-muted hover:text-accent hover:bg-surface2 rounded-2xl transition-all"
+                      className="p-3 text-primary bg-card border-[3px] border-default rounded-xl hover:-translate-y-1 hover:shadow-brutal hover:bg-yellow hover:text-black transition-all"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-5 h-5 text-current" />
                     </button>
                   </td>
                 </tr>

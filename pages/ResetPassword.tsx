@@ -74,19 +74,19 @@ const ResetPassword: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-accent/20">
-            <Layers className="text-white w-10 h-10" />
+          <div className="w-20 h-20 bg-accent rounded-[2rem] border-[4px] border-default shadow-brutal flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
+            <Layers className="text-black w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-bold text-primary">Set new password</h1>
-          <p className="text-muted mt-2">Choose a secure password for your account.</p>
+          <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">Set new password</h1>
+          <p className="text-primary font-bold mt-2">Choose a secure password for your account.</p>
         </div>
 
         <Card className="p-8">
           {checkingRecovery ? (
-            <p className="text-sm text-center text-muted">Checking reset link...</p>
+            <p className="text-sm text-center text-primary font-bold">Checking reset link...</p>
           ) : !hasRecoverySession ? (
             <div className="space-y-4 text-center">
-              <p className="text-sm text-muted">This reset link is invalid or expired. Please request a new one.</p>
+              <p className="text-sm text-primary font-bold">This reset link is invalid or expired. Please request a new one.</p>
               <Button type="button" className="w-full py-3" onClick={() => navigate("/auth", { replace: true })}>
                 Back to Sign in
               </Button>

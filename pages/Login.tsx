@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Layers, LogIn, UserPlus } from "lucide-react";
+import { Eye, EyeOff, Layers, LogIn, UserPlus } from "lucide-react";
 import { Button, Card, Input } from "../components/Common";
 import { useAuth } from "../src/contexts/AuthContext";
 import { supabase } from "../src/lib/supabase";
@@ -11,6 +11,7 @@ const Login: React.FC = () => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -81,13 +82,13 @@ const Login: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-accent/20">
-            <Layers className="text-white w-10 h-10" />
+          <div className="w-20 h-20 bg-accent rounded-[2rem] border-[4px] border-default shadow-brutal flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
+            <Layers className="text-black w-10 h-10" />
           </div>
-          <h1 className="text-3xl font-bold text-primary">
+          <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">
             {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Reset password"}
           </h1>
-          <p className="text-muted mt-2">
+          <p className="text-primary font-bold mt-3">
             {mode === "login"
               ? "Sign in to your LearnBot account"
               : mode === "signup"
@@ -131,15 +132,32 @@ const Login: React.FC = () => {
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
             />
-            <Input 
-              label="Password" 
-              type="password" 
-              placeholder="••••••••" 
-              required 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={submitting}
-            />
+            <div className="space-y-2 w-full">
+              <label className="text-[12px] font-black text-primary uppercase tracking-[0.2em] ml-2">Password</label>
+              <div className="relative">
+                <input
+                  className="
+                    w-full px-5 py-4 pr-12 bg-card border-[3px] border-default
+                    rounded-xl focus:border-accent transition-all outline-none text-primary font-bold placeholder-muted
+                  "
+                  type={passwordVisible ? "text" : "password"}
+                  placeholder="••••••••"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={submitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPasswordVisible((v) => !v)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-accent transition-colors"
+                  aria-label={passwordVisible ? "Hide password" : "Show password"}
+                  disabled={submitting}
+                >
+                  {passwordVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+            </div>
               </>
             )}
             
@@ -166,7 +184,7 @@ const Login: React.FC = () => {
                     setError("");
                     setSuccess("");
                   }}
-                  className="text-muted hover:text-primary"
+                  className="text-primary font-bold hover:text-accent hover:underline"
                 >
                   Forgot password?
                 </button>
@@ -179,9 +197,9 @@ const Login: React.FC = () => {
           {mode !== "reset" && (
             <>
               <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-default"></div></div>
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-[3px] border-default"></div></div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-card text-muted">Or continue with</span>
+                  <span className="px-4 py-1 bg-card border-[3px] border-default font-black uppercase text-[10px] tracking-widest text-primary">Or continue with</span>
                 </div>
               </div>
 
@@ -189,16 +207,16 @@ const Login: React.FC = () => {
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={submitting}
-                className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border-2 border-default rounded-xl hover:bg-surface2 transition-colors"
+                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border-[3px] border-default text-primary rounded-xl hover:-translate-y-1 hover:shadow-brutal hover:text-black hover:bg-yellow transition-all active:translate-y-0 active:shadow-none font-black uppercase tracking-widest text-[12px]"
               >
-                <Layers className="w-5 h-5 text-accent" />
-                <span className="font-medium text-primary">Google</span>
+                <Layers className="w-5 h-5" />
+                <span>Google</span>
               </button>
             </>
           )}
 
           {(mode === "login" || mode === "signup") && (
-            <p className="mt-6 text-sm text-center text-muted">
+            <p className="mt-8 text-sm text-center text-primary font-bold">
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
@@ -207,14 +225,14 @@ const Login: React.FC = () => {
                   setError("");
                   setSuccess("");
                 }}
-                className="font-medium text-pink-500 hover:text-pink-400 hover:underline"
+                className="font-black text-accent hover:text-primary hover:underline ml-2"
               >
                 {mode === "login" ? "Create account" : "Sign in"}
               </button>
             </p>
           )}
           {mode === "reset" && (
-            <p className="mt-2 text-sm text-center text-muted">
+            <p className="mt-4 text-sm text-center text-primary font-bold">
               <button
                 type="button"
                 onClick={() => {
@@ -222,7 +240,7 @@ const Login: React.FC = () => {
                   setError("");
                   setSuccess("");
                 }}
-                className="font-medium text-pink-500 hover:text-pink-400 hover:underline"
+                className="font-black text-accent hover:text-primary hover:underline"
               >
                 Back to Sign in
               </button>
@@ -235,3 +253,4 @@ const Login: React.FC = () => {
 };
 
 export default Login;
+
