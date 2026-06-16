@@ -1,31 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
-  --bg: #fff5f7;
-  --surface: #ffffff;
-  --surface2: #ffffff;
-  --border: #000000;
-  --text: #000000;
-  --muted: #000000;
-  --accent: #ff006e;
-  --secondary: #00f5ff;
-  --yellow: #ffd60a;
-  --purple: #8338ec;
-  --green: #39FF14;
-  --shadow: rgba(0, 0, 0, 1);
+  --bg: #f4f0ff;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface2: #ece7ff;
+  --border: rgba(124, 101, 178, 0.22);
+  --text: #211a35;
+  --muted: #746a8f;
+  --accent: #8b5cf6;
+  --secondary: #38bdf8;
+  --yellow: #f9d76b;
+  --purple: #a78bfa;
+  --green: #34d399;
+  --shadow: rgba(79, 70, 129, 0.18);
 }
 
 .dark {
-  --bg: #000000;
-  --surface: #1A1A1A;
-  --surface2: #111111;
-  --border: #000000;
-  --text: #FFFFFF;
-  --muted: #A0A0A0;
-  --accent: #FF4FA3;
-  --secondary: #00E5FF;
-  --yellow: #FFD84D;
-  --purple: #A78BFA;
-  --green: #39FF14;
-  --shadow: rgba(0, 0, 0, 1);
+  --bg: #11101b;
+  --surface: rgba(30, 28, 44, 0.86);
+  --surface2: #1b1929;
+  --border: rgba(191, 178, 255, 0.18);
+  --text: #f7f4ff;
+  --muted: #b8afd0;
+  --accent: #c084fc;
+  --secondary: #67e8f9;
+  --yellow: #fde68a;
+  --purple: #a78bfa;
+  --green: #86efac;
+  --shadow: rgba(0, 0, 0, 0.35);
 }
 
 html,
@@ -38,6 +42,21 @@ body {
   font-family: "Inter", sans-serif;
   background: var(--bg);
   color: var(--text);
+  background-image:
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.16), transparent 30rem),
+    radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.14), transparent 32rem);
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 26%, transparent);
 }
 
 .perspective-1000 {
@@ -70,6 +89,5 @@ body {
 }
 
 .active-nav-shadow {
-  box-shadow: 0 10px 15px -3px color-mix(in oklab, var(--accent) 40%, transparent),
-    0 4px 6px -4px color-mix(in oklab, var(--accent) 25%, transparent);
+  box-shadow: 0 16px 35px -18px color-mix(in oklab, var(--accent) 55%, transparent);
 }

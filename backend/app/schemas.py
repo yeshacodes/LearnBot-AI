@@ -88,6 +88,9 @@ class SourceOut(BaseModel):
     storage_bucket: str | None = None
     storage_path: str | None = None
     created_at: str
+    status: str | None = None
+    chunk_count: int | None = None
+    extracted_text_length: int | None = None
 
 
 class SourcesListResponse(BaseModel):

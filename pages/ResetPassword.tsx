@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layers } from "lucide-react";
-import { Button, Card, Input } from "../components/Common";
+import { Button, Card, ErrorState, Input, LoadingState } from "../components/Common";
 import { supabase } from "../src/lib/supabase";
 
 const ResetPassword: React.FC = () => {
@@ -19,12 +19,7 @@ const ResetPassword: React.FC = () => {
     const checkRecoverySession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      if (data.session) {
-        setHasRecoverySession(true);
-        setCheckingRecovery(false);
-        return;
-      }
-      setHasRecoverySession(false);
+      setHasRecoverySession(!!data.session);
       setCheckingRecovery(false);
     };
     checkRecoverySession();
@@ -71,52 +66,52 @@ const ResetPassword: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 bg-accent rounded-[2rem] border-[4px] border-default shadow-brutal flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
-            <Layers className="text-black w-10 h-10" />
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
+            <Layers className="h-10 w-10" />
           </div>
-          <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">Set new password</h1>
-          <p className="text-primary font-bold mt-2">Choose a secure password for your account.</p>
+          <h1 className="font-heading text-4xl font-bold tracking-tight text-primary">Set new password</h1>
+          <p className="mt-3 text-sm font-medium leading-6 text-muted">Choose a secure password for your account.</p>
         </div>
 
         <Card className="p-8">
           {checkingRecovery ? (
-            <p className="text-sm text-center text-primary font-bold">Checking reset link...</p>
+            <LoadingState label="Checking reset link" />
           ) : !hasRecoverySession ? (
             <div className="space-y-4 text-center">
-              <p className="text-sm text-primary font-bold">This reset link is invalid or expired. Please request a new one.</p>
-              <Button type="button" className="w-full py-3" onClick={() => navigate("/auth", { replace: true })}>
-                Back to Sign in
+              <ErrorState title="Reset link expired" message="This reset link is invalid or expired. Please request a new one." embedded />
+              <Button type="button" className="w-full" onClick={() => navigate("/auth", { replace: true })}>
+                Back to sign in
               </Button>
             </div>
           ) : (
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <Input
-              label="New Password"
-              type="password"
-              placeholder="••••••••"
-              required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              disabled={submitting}
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="••••••••"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              disabled={submitting}
-            />
-            <Button type="submit" className="w-full py-3" disabled={submitting}>
-              {submitting ? "Updating..." : "Update password"}
-            </Button>
-            {error && <p className="text-sm text-accent text-center">{error}</p>}
-            {success && <p className="text-sm text-primary text-center">{success}</p>}
-          </form>
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <Input
+                label="New password"
+                type="password"
+                placeholder="Password"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                disabled={submitting}
+              />
+              <Input
+                label="Confirm password"
+                type="password"
+                placeholder="Password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                disabled={submitting}
+              />
+              <Button type="submit" className="w-full" disabled={submitting}>
+                {submitting ? "Updating..." : "Update password"}
+              </Button>
+              {error && <ErrorState title="Password reset failed" message={error} embedded />}
+              {success && <p className="text-center text-sm font-semibold text-primary">{success}</p>}
+            </form>
           )}
         </Card>
       </div>

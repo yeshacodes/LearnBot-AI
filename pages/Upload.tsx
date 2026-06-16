@@ -1,209 +1,234 @@
-
-import React, { useEffect, useState } from 'react';
-import { FileUp, Link as LinkIcon, CheckCircle2, FileText, Loader2, Globe, Sparkles } from 'lucide-react';
-import { Button, Input, Card, Badge } from '../components/Common';
-import { Source } from '../types';
-import { apiFetch, normalizeSources, parseSourcesList } from '../src/lib/api';
+import React, { useState } from "react";
+import { CheckCircle2, FileText, FileUp, Globe, Link as LinkIcon, Loader2, MessageSquare, Sparkles, Target } from "lucide-react";
+import { Link } from "react-router-dom";
+import { AppRoute } from "../types";
+import { Badge, Button, Card, EmptyState, ErrorState, Input, LoadingState, PageHeader } from "../components/Common";
+import { useLearningData } from "../src/contexts/LearningDataContext";
+import { API_ROUTES, apiFetch, getSourceDebug, normalizeSource, sourceFromDebug } from "../src/lib/api";
+import type { Source } from "../types";
 
 const Upload: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'pdf' | 'url'>('pdf');
-  const [url, setUrl] = useState('');
+  const data = useLearningData();
+  const [activeTab, setActiveTab] = useState<"pdf" | "url">("pdf");
+  const [url, setUrl] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [files, setFiles] = useState<{ name: string; size: string; progress: number }[]>([]);
-  const [sourcesError, setSourcesError] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [error, setError] = useState<string | null>(null);
 
-  async function fetchSources() {
-    setSourcesError(null);
-
-    try {
-      const res = await apiFetch('/api/sources', { credentials: "include" });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Failed to load sources (${res.status}): ${text}`);
-      }
-
-      const data = await res.json();
-      const rawList = parseSourcesList(data);
-      const normalized: Source[] = normalizeSources(rawList);
-
-      setFiles(
-        normalized.map((s) => ({
-          name: s.name,
-          size: "",
-          progress: 100,
-        }))
-      );
-    } catch (e: any) {
-      setSourcesError(`Failed to load sources: ${e?.message ?? "Unknown error"}`);
+  const getUploadErrorMessage = (status: number, payload: any, fallback: string) => {
+    if (status === 404) {
+      return "Upload route was not found on the backend. Confirm Render deployed the latest backend and the frontend API base URL points to the Render service root.";
     }
-  }
+    if (status === 0) {
+      return "Backend is unreachable. Check that the API service is running and the API base URL is correct.";
+    }
+    return payload?.detail ?? fallback;
+  };
 
-  useEffect(() => {
-    fetchSources();
-  }, []);
+  const finishSource = (sourceId: string, failed = false, updates: Partial<Source> = {}) => {
+    data.updateSource(sourceId, { status: failed ? "failed" : "ready", ...updates });
+    setStatus(failed ? "error" : "success");
+  };
 
   const handleUrlIngest = async () => {
-    if (!url) return;
+    if (!url.trim()) return;
     setIsIngesting(true);
-    setStatus('idle');
-    setSourcesError(null);
+    setError(null);
+    setStatus("idle");
+    let sourceName = url.trim();
     try {
-      const res = await apiFetch('/api/sources/web', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      sourceName = new URL(url).hostname;
+    } catch {
+      setError("Enter a valid URL including https://");
+      setIsIngesting(false);
+      return;
+    }
+    const source = data.addSource({ name: sourceName, type: "url", url, status: "processing" });
+    try {
+      const res = await apiFetch(API_ROUTES.sourceWeb, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Web sync failed (${res.status}): ${text}`);
+      const payload = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(getUploadErrorMessage(res.status, payload, "Web ingestion failed."));
+      const backendSource = normalizeSource({
+        ...(payload?.source ?? {}),
+        id: payload?.source_id ?? payload?.source?.id,
+        chunk_count: payload?.chunk_count ?? payload?.source?.chunk_count,
+        extracted_text_length: payload?.extracted_text_length ?? payload?.source?.extracted_text_length,
+      });
+      if (!backendSource.id || (backendSource.chunkCount ?? 0) <= 0) {
+        throw new Error("No readable text found in this URL.");
       }
-
-      await fetchSources();
+      let finalSource = backendSource;
+      try {
+        const debug = await getSourceDebug(backendSource.id);
+        finalSource = sourceFromDebug(debug, { ...source, ...backendSource });
+      } catch (debugError) {
+        console.warn(debugError);
+      }
+      data.upsertSource(finalSource, source.id);
+      setStatus("success");
+      setUrl("");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Backend ingestion did not complete.";
+      setError(message);
+      finishSource(source.id, true, {
+        processingError: message.includes("No text extracted") ? "No readable text found" : message,
+        chunkCount: 0,
+        extractedTextLength: 0,
+      });
+    } finally {
       setIsIngesting(false);
-      setStatus('success');
-      setUrl('');
-    } catch (err: any) {
-      setIsIngesting(false);
-      setStatus('error');
-      setSourcesError(err?.message ?? 'Web sync failed');
     }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setIsIngesting(true);
-      setStatus('idle');
-      setSourcesError(null);
+    const selectedFiles = Array.from(e.target.files ?? []);
+    if (!selectedFiles.length) return;
+    setIsIngesting(true);
+    setError(null);
+    setStatus("idle");
+    for (const file of selectedFiles) {
+      const source = data.addSource({
+        name: file.name,
+        type: "pdf",
+        size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+        status: "processing",
+      });
       try {
-        for (const file of Array.from(e.target.files as FileList) as File[]) {
-          const form = new FormData();
-          form.append("file", file);
-
-          const res = await apiFetch('/api/sources/pdf', {
-            method: "POST",
-            body: form,
-            credentials: "include",
-          });
-
-          if (!res.ok) {
-            const text = await res.text();
-            throw new Error(`Upload failed (${res.status}): ${text}`);
-          }
+        const form = new FormData();
+        form.append("file", file);
+        const res = await apiFetch(API_ROUTES.sourceUpload, { method: "POST", body: form, credentials: "include" });
+        const payload = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(getUploadErrorMessage(res.status, payload, "Upload failed."));
+        const backendSource = normalizeSource({
+          ...(payload?.source ?? {}),
+          id: payload?.source_id ?? payload?.source?.id,
+          chunk_count: payload?.chunk_count ?? payload?.chunks_indexed ?? payload?.source?.chunk_count,
+          extracted_text_length: payload?.extracted_text_length ?? payload?.source?.extracted_text_length,
+        });
+        if (!backendSource.id || (backendSource.chunkCount ?? 0) <= 0) {
+          throw new Error("No readable text found in this PDF.");
         }
-
-        await fetchSources();
-        setStatus('success');
-      } catch (err: any) {
-        setStatus('error');
-        setSourcesError(err?.message ?? 'Upload failed');
-      } finally {
-        setIsIngesting(false);
-        e.target.value = '';
+        let finalSource = backendSource;
+        try {
+          const debug = await getSourceDebug(backendSource.id);
+          finalSource = sourceFromDebug(debug, { ...source, ...backendSource });
+        } catch (debugError) {
+          console.warn(debugError);
+        }
+        data.upsertSource(finalSource, source.id);
+        setStatus("success");
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Backend upload did not complete.";
+        setError(message);
+        finishSource(source.id, true, {
+          processingError: message.includes("No text extracted") || message.includes("No readable text") ? "No readable text found" : message,
+          chunkCount: 0,
+          extractedTextLength: 0,
+        });
       }
     }
+    setIsIngesting(false);
+    e.target.value = "";
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-16 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <div className="text-center space-y-5">
-        <Badge color="green">Knowledge Base</Badge>
-        <h1 className="text-5xl font-heading font-black text-primary tracking-tighter uppercase">Expand Your <span className="text-accent">Mind</span></h1>
-        <p className="text-secondary font-bold text-sm tracking-widest uppercase">Sync your PDFs and web resources.</p>
+    <div className="space-y-8 pb-12">
+      <PageHeader
+        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Upload" }]}
+        eyebrow="Upload"
+        title="Build your knowledge base"
+        description="Files and URLs are saved into LearnBot state with processing status, summaries, key concepts, and next actions."
+      />
+
+      <div className="flex flex-wrap gap-2">
+        <Button variant={activeTab === "pdf" ? "primary" : "soft"} icon={FileUp} onClick={() => setActiveTab("pdf")}>Files</Button>
+        <Button variant={activeTab === "url" ? "primary" : "soft"} icon={LinkIcon} onClick={() => setActiveTab("url")}>URL</Button>
       </div>
 
-      <div className="flex justify-center">
-        <div className="inline-flex p-2 bg-card rounded-[2.5rem] border-[4px] border-default shadow-brutal">
-          <button 
-            onClick={() => setActiveTab('pdf')}
-            className={`flex items-center gap-3 px-10 py-4 rounded-[2rem] transition-all duration-300 font-black text-[12px] uppercase tracking-widest border-[3px] border-transparent ${activeTab === 'pdf' ? 'bg-secondary text-black border-default shadow-sm' : 'text-primary hover:bg-surface2'}`}
-          >
-            <FileUp className={`w-5 h-5 ${activeTab === 'pdf' ? 'text-black' : 'text-primary'}`} />
-            PDF Library
-          </button>
-          <button 
-            onClick={() => setActiveTab('url')}
-            className={`flex items-center gap-3 px-10 py-4 rounded-[2rem] transition-all duration-300 font-black text-[12px] uppercase tracking-widest border-[3px] border-transparent ${activeTab === 'url' ? 'bg-secondary text-black border-default shadow-sm' : 'text-primary hover:bg-surface2'}`}
-          >
-            <LinkIcon className={`w-5 h-5 ${activeTab === 'url' ? 'text-black' : 'text-primary'}`} />
-            Web Sync
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        <Card className="p-12 flex flex-col items-center justify-center min-h-[450px] group">
-          {activeTab === 'pdf' ? (
-            <div className="w-full text-center space-y-8">
-              <div className="w-24 h-24 bg-yellow border-[3px] border-default rounded-[3rem] text-black flex items-center justify-center mx-auto mb-6 transform transition-transform group-hover:-translate-y-2 shadow-brutal">
-                <FileUp className="w-12 h-12 text-black" />
+      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+        <Card className="p-8">
+          {activeTab === "pdf" ? (
+            <div className="space-y-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-violet-100 text-violet-700">
+                <FileUp className="h-8 w-8" />
               </div>
-              <h3 className="text-3xl font-heading font-black text-primary tracking-tight uppercase">Upload Documents</h3>
-              <p className="text-primary text-[13px] font-bold leading-relaxed max-w-xs mx-auto">Upload PDF or DOCX research papers, textbooks, or notes.</p>
-              <input type="file" multiple accept=".pdf,.docx" onChange={handleFileChange} className="hidden" id="file-upload" />
-              <label htmlFor="file-upload" className="inline-flex items-center justify-center px-12 py-5 bg-accent text-black border-[4px] border-default rounded-[2rem] font-black uppercase tracking-widest text-[12px] cursor-pointer transition-all hover:-translate-y-1 hover:shadow-brutal-lg shadow-sm active:scale-95 shadow-brutal">
-                Browse System
+              <div>
+                <h2 className="text-2xl font-bold text-primary">Upload documents</h2>
+                <p className="mt-2 text-sm font-medium leading-6 text-muted">Add PDFs to your study workspace. Sources become ready only after readable text is extracted and chunks are indexed.</p>
+              </div>
+              <input id="file-upload" type="file" multiple accept=".pdf" onChange={handleFileChange} className="hidden" />
+              <label htmlFor="file-upload" className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-2xl bg-accent px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-accent/25">
+                {isIngesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
+                Choose files
               </label>
-              {isIngesting && <div>Loading sources...</div>}
-              {sourcesError && <div style={{ color: "red" }}>{sourcesError}</div>}
             </div>
           ) : (
-            <div className="w-full space-y-10">
-              <div className="text-center">
-                <div className="w-24 h-24 bg-purple border-[3px] border-default rounded-[3rem] text-black flex items-center justify-center mx-auto mb-6 shadow-brutal hover:-translate-y-2 transition-transform">
-                  <Globe className="w-12 h-12 text-black" />
-                </div>
-                <h3 className="text-3xl font-heading font-black text-primary tracking-tight uppercase">URL Ingestion</h3>
-                <p className="text-primary text-[13px] font-bold">Paste a link to crawl web knowledge.</p>
+            <div className="space-y-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-sky-100 text-sky-700">
+                <Globe className="h-8 w-8" />
               </div>
-              <div className="space-y-5">
-                <Input placeholder="https://wikipedia.org/wiki/Science" value={url} onChange={(e) => setUrl(e.target.value)} />
-                <Button onClick={handleUrlIngest} disabled={isIngesting || !url} className="w-full !py-5 !rounded-[2rem] !font-black !uppercase !tracking-widest !text-[11px]">
-                  {isIngesting ? <Loader2 className="w-6 h-6 animate-spin" /> : "Initiate Sync"}
-                </Button>
+              <div>
+                <h2 className="text-2xl font-bold text-primary">Sync a web source</h2>
+                <p className="mt-2 text-sm font-medium leading-6 text-muted">Paste a trusted article, documentation page, or research URL.</p>
               </div>
-              {status === 'success' && (
-                <div className="flex items-center justify-center gap-3 p-4 bg-yellow text-black rounded-[2rem] border-[3px] border-default shadow-sm animate-in zoom-in">
-                  <CheckCircle2 className="w-5 h-5 text-black" />
-                  <span className="text-[12px] font-black uppercase tracking-widest">Source indexed.</span>
-                </div>
-              )}
-              {sourcesError && <div style={{ color: "red" }}>{sourcesError}</div>}
+              <Input placeholder="https://example.com/article" value={url} onChange={(e) => setUrl(e.target.value)} />
+              <Button onClick={handleUrlIngest} disabled={isIngesting || !url.trim()} icon={isIngesting ? Loader2 : Sparkles}>
+                Sync source
+              </Button>
             </div>
           )}
+
+          {status === "success" && (
+            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-emerald-100 p-4 text-sm font-bold text-emerald-800">
+              <CheckCircle2 className="h-5 w-5" />
+              Source saved and ready for study.
+            </div>
+          )}
+          {error && <div className="mt-4"><ErrorState title="Ingestion notice" message={error} embedded /></div>}
+          {isIngesting && <div className="mt-4"><LoadingState label="Saving source" /></div>}
         </Card>
 
-        <div className="space-y-8">
-          <h3 className="text-[12px] font-black text-primary uppercase tracking-[0.25em] px-4 font-heading">Recently Synced</h3>
-          <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
-            {files.length === 0 ? (
-              <div className="h-48 flex flex-col items-center justify-center text-primary bg-card border-[4px] border-dashed border-default rounded-[3rem]">
-                <p className="font-black text-[12px] uppercase tracking-widest opacity-50">Context is empty</p>
-              </div>
-            ) : (
-              files.map((file, idx) => (
-                <Card key={idx} className="p-5 flex items-center gap-6 animate-in slide-in-from-right duration-500 !rounded-[2rem]">
-                  <div className="p-4 bg-card border-[3px] border-default text-primary rounded-[1.5rem] shadow-sm">
-                    <FileText className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="text-[14px] font-black text-primary truncate max-w-[150px] uppercase tracking-tighter">{file.name}</span>
-                      <Badge color="green">Ready</Badge>
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-primary">Recent sources</h2>
+          {data.sources.length === 0 ? (
+            <EmptyState title="No sources yet" description="Upload a source to unlock chat, quizzes, and flashcards." action={<Button icon={FileUp} onClick={() => document.getElementById("file-upload")?.click()}>Choose file</Button>} />
+          ) : (
+            data.sources.slice(0, 5).map((source) => (
+              <Card key={source.id} className="p-5" interactive>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-surface2 text-accent">
+                      {source.type === "url" ? <Globe className="h-6 w-6" /> : <FileText className="h-6 w-6" />}
                     </div>
-                    <div className="w-full bg-card border-2 border-default rounded-full h-3 mt-3">
-                      <div className="bg-accent h-full border-r-2 border-default transition-all duration-1000" style={{ width: `${file.progress}%` }}></div>
+                    <div>
+                      <h3 className="font-bold text-primary">{source.name}</h3>
+                      <p className="mt-1 text-sm font-medium text-muted">
+                        {source.status === "failed"
+                          ? source.processingError ?? "Processing failed."
+                          : source.chunkCount !== undefined
+                            ? `${source.chunkCount} chunks · ${source.extractedTextLength ?? 0} characters extracted`
+                            : source.summary}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {(source.keyConcepts ?? []).map((concept) => <Badge key={concept} color="purple">{concept}</Badge>)}
+                      </div>
                     </div>
                   </div>
-                </Card>
-              ))
-            )}
-          </div>
+                  <Badge color={source.status === "ready" ? "green" : source.status === "failed" ? "red" : "orange"}>{source.status}</Badge>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <Link to={AppRoute.QUIZ}><Button variant="soft" icon={Target}>Generate Quiz</Button></Link>
+                  <Button variant="soft" icon={Sparkles} onClick={() => data.createDeckFromSource(source.id)}>Generate Flashcards</Button>
+                  <Link to={AppRoute.CHAT}><Button variant="soft" icon={MessageSquare}>Ask AI</Button></Link>
+                </div>
+              </Card>
+            ))
+          )}
         </div>
       </div>
     </div>

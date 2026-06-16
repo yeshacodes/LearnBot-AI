@@ -29,10 +29,10 @@ const steps = [
 ];
 
 const panelClass =
-  "rounded-3xl p-6 bg-card border-[4px] border-default shadow-brutal transition-all hover:shadow-brutal-lg hover:-translate-y-1 text-primary";
+  "rounded-3xl p-6 bg-card border border-white/60 shadow-[12px_12px_36px_var(--shadow),-10px_-10px_30px_rgba(255,255,255,0.45)] backdrop-blur-xl transition-all hover:-translate-y-1 text-primary";
 
 const chipClass =
-  "px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest border-[3px] border-default bg-yellow text-black";
+  "px-4 py-1.5 rounded-full text-xs font-bold bg-surface2 text-primary";
 
 const Landing: React.FC = () => {
   const navigate = useNavigate();
@@ -41,26 +41,26 @@ const Landing: React.FC = () => {
     <div className="min-h-screen text-primary bg-background">
       <div className="max-w-6xl mx-auto px-6">
         <section className="py-20 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-accent rounded-[2rem] border-[4px] border-default shadow-brutal mb-8 transform -rotate-3 hover:rotate-0 transition-transform">
-            <Layers className="w-10 h-10 text-black" />
+          <div className="mb-8 inline-flex h-20 w-20 items-center justify-center rounded-3xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)] transition-transform hover:-translate-y-1">
+            <Layers className="w-10 h-10" />
           </div>
           <div>
             <Badge color="blue">LearnBot Platform</Badge>
           </div>
-          <h1 className="mt-8 text-5xl md:text-7xl font-heading font-black tracking-tighter text-primary uppercase">
+          <h1 className="mt-8 text-5xl md:text-7xl font-heading font-bold tracking-tight text-primary">
             Learn Faster With AI-Powered Study Workflows
           </h1>
           <p className="mt-6 text-primary font-bold max-w-2xl mx-auto text-lg">
             Upload your sources, chat with context, and generate flashcards in one focused workspace.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button className="px-10 py-5 text-lg border-[4px] shadow-brutal" onClick={() => navigate("/auth")}>
+            <Button className="px-10 py-5 text-lg" onClick={() => navigate("/auth")}>
               Get Started
-              <ArrowRight className="w-6 h-6 ml-3 text-black" />
+              <ArrowRight className="w-6 h-6 ml-3" />
             </Button>
             <a
               href="#features"
-              className="inline-flex items-center justify-center px-8 py-5 rounded-[2rem] font-black text-[15px] uppercase tracking-widest border-[4px] border-default bg-card text-primary hover:bg-yellow hover:text-black hover:-translate-y-1 hover:shadow-brutal transition-all"
+              className="inline-flex items-center justify-center rounded-2xl bg-card px-8 py-5 text-sm font-bold text-primary transition-all hover:-translate-y-0.5 hover:bg-surface2 hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
             >
               Explore Features
             </a>
@@ -72,8 +72,8 @@ const Landing: React.FC = () => {
           <div className="mt-12 grid gap-6 md:grid-cols-3">
             {features.map((feature) => (
               <div key={feature.title} className={panelClass}>
-                <div className="w-14 h-14 rounded-2xl bg-purple border-[3px] border-default text-black flex items-center justify-center mb-6 shadow-sm">
-                  <feature.icon className="w-8 h-8 text-black" />
+                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100 text-violet-700 shadow-sm">
+                  <feature.icon className="w-8 h-8" />
                 </div>
                 <h3 className="text-xl font-black tracking-tight font-heading uppercase text-primary">{feature.title}</h3>
                 <p className="mt-3 text-base font-bold text-primary/80">{feature.description}</p>

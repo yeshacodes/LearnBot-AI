@@ -64,6 +64,7 @@ s3_store = S3Store(
 )
 settings.data_dir.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 if settings.dev_auth_bypass:
     logger.warning("DEV_AUTH_BYPASS is enabled. All requests are authenticated as dev-user.")
@@ -80,9 +81,42 @@ def _user_dir(user_id: str) -> Path:
     return user_dir
 
 
+def _source_debug_payload(user_id: str, source_id: str) -> dict[str, Any]:
+    source = source_store.get_source(user_id=user_id, source_id=source_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    db_chunks = db.list_chunks_by_source(user_id=user_id, source_id=source_id)
+    supabase_chunks = source_store.list_source_chunks(source_id=source_id, user_id=user_id)
+    content_parts = [str(chunk.get("content") or "") for chunk in db_chunks]
+    extracted_text_length = sum(len(part) for part in content_parts)
+    chunk_count = len(db_chunks)
+    status_value = "ready" if chunk_count > 0 and extracted_text_length > 0 else "failed"
+    return {
+        "source_id": source_id,
+        "filename": source.get("name") or "Untitled",
+        "status": status_value,
+        "extracted_text_length": extracted_text_length,
+        "chunk_count": chunk_count,
+        "source_chunk_count": len(supabase_chunks),
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/api/health")
+def api_health() -> dict[str, Any]:
+    routes = sorted(
+        {
+            f"{','.join(sorted(route.methods or []))} {route.path}"
+            for route in app.routes
+            if getattr(route, "path", "").startswith("/api/")
+        }
+    )
+    return {"status": "ok", "routes": routes}
 
 
 @app.get("/me")
@@ -90,8 +124,7 @@ def get_me(user_id: str = Depends(get_current_user_id)) -> dict[str, str]:
     return {"user_id": user_id}
 
 
-@app.post("/api/sources/pdf")
-async def upload_pdf(
+async def _upload_pdf_impl(
     file: UploadFile = File(...),
     user_id: str = Depends(get_current_user_id),
 ) -> dict[str, Any]:
@@ -101,6 +134,7 @@ async def upload_pdf(
     safe_name = Path(file.filename).name
     source_id = str(uuid4())
     s3_key = f"{user_id}/{source_id}/{safe_name}"
+    logger.info("PDF upload started user_id=%s source_id=%s filename=%s", user_id, source_id, safe_name)
 
     source = source_store.create_source(
         source_id=source_id,
@@ -112,6 +146,7 @@ async def upload_pdf(
     )
 
     file_bytes = await file.read()
+    logger.info("PDF upload read bytes user_id=%s source_id=%s bytes=%s", user_id, source_id, len(file_bytes))
     try:
         s3_store.upload_bytes(
             key=s3_key,
@@ -135,6 +170,15 @@ async def upload_pdf(
             temp_file.write(downloaded_bytes)
             temp_path = Path(temp_file.name)
         chunks = pdf_to_chunks(temp_path)
+        extracted_text_length = sum(len(str(chunk.get("content") or "")) for chunk in chunks)
+        logger.info(
+            "PDF extraction complete user_id=%s source_id=%s filename=%s chunk_count=%s extracted_text_length=%s",
+            user_id,
+            source_id,
+            safe_name,
+            len(chunks),
+            extracted_text_length,
+        )
         source_store.replace_source_chunks(
             source_id=source_id,
             user_id=user_id,
@@ -157,21 +201,38 @@ async def upload_pdf(
             temp_path.unlink(missing_ok=True)
 
     if not chunks:
+        logger.warning("PDF extraction found no readable text user_id=%s source_id=%s filename=%s", user_id, source_id, safe_name)
         s3_store.delete_object(s3_key)
         source_store.soft_delete_source(user_id=user_id, source_id=source_id)
         raise HTTPException(status_code=400, detail="No text extracted from PDF")
 
     chunk_ids = db.add_chunks(user_id=user_id, source_id=source_id, chunks=chunks, source_name=safe_name)
+    logger.info("PDF chunks stored user_id=%s source_id=%s sqlite_chunk_count=%s", user_id, source_id, len(chunk_ids))
     user_dir = _user_dir(user_id)
     vectors = gemini.embed_texts([c["content"] for c in chunks])
     UserVectorStore(user_dir).add(vectors, chunk_ids)
+    logger.info("PDF vectors indexed user_id=%s source_id=%s vector_count=%s", user_id, source_id, len(chunk_ids))
 
-    return {"source": source, "chunks_indexed": len(chunks)}
+    return {
+        "source": {
+            **source,
+            "status": "ready",
+            "chunk_count": len(chunks),
+            "extracted_text_length": sum(len(str(chunk.get("content") or "")) for chunk in chunks),
+        },
+        "source_id": source_id,
+        "chunk_count": len(chunks),
+        "chunks_indexed": len(chunks),
+        "extracted_text_length": sum(len(str(chunk.get("content") or "")) for chunk in chunks),
+    }
 
 
-@app.post("/api/sources/url")
-async def ingest_url(payload: URLIngestRequest, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
-    return await ingest_web(payload, user_id)
+@app.post("/api/sources/upload")
+async def upload_pdf(
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user_id),
+) -> dict[str, Any]:
+    return await _upload_pdf_impl(file=file, user_id=user_id)
 
 
 @app.post("/api/sources/web")
@@ -181,6 +242,7 @@ async def ingest_web(payload: URLIngestRequest, user_id: str = Depends(get_curre
 
     try:
         source_name, _, chunks = await fetch_web_document(source_url)
+        logger.info("Web extraction complete user_id=%s source_id=%s url=%s chunk_count=%s", user_id, source_id, source_url, len(chunks))
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {exc}") from exc
 
@@ -193,6 +255,7 @@ async def ingest_web(payload: URLIngestRequest, user_id: str = Depends(get_curre
     )
 
     if not chunks:
+        logger.warning("Web extraction found no readable text user_id=%s source_id=%s url=%s", user_id, source_id, source_url)
         source_store.soft_delete_source(user_id=user_id, source_id=source_id)
         raise HTTPException(status_code=400, detail="No text extracted from URL")
 
@@ -203,9 +266,11 @@ async def ingest_web(payload: URLIngestRequest, user_id: str = Depends(get_curre
             chunks=chunks,
         )
         chunk_ids = db.add_chunks(user_id=user_id, source_id=source_id, chunks=chunks, source_name=source_name)
+        logger.info("Web chunks stored user_id=%s source_id=%s sqlite_chunk_count=%s", user_id, source_id, len(chunk_ids))
         user_dir = _user_dir(user_id)
         vectors = gemini.embed_texts([c["content"] for c in chunks])
         UserVectorStore(user_dir).add(vectors, chunk_ids)
+        logger.info("Web vectors indexed user_id=%s source_id=%s vector_count=%s", user_id, source_id, len(chunk_ids))
     except Exception as exc:
         logger.exception("Failed to process web source for source_id=%s", source_id)
         db.delete_chunks_by_source(user_id=user_id, source_id=source_id)
@@ -213,12 +278,52 @@ async def ingest_web(payload: URLIngestRequest, user_id: str = Depends(get_curre
         source_store.soft_delete_source(user_id=user_id, source_id=source_id)
         raise HTTPException(status_code=500, detail="Failed to process web source") from exc
 
-    return {"source": source, "chunk_count": len(chunks)}
+    return {
+        "source": {
+            **source,
+            "status": "ready",
+            "chunk_count": len(chunks),
+            "extracted_text_length": sum(len(str(chunk.get("content") or "")) for chunk in chunks),
+        },
+        "source_id": source_id,
+        "chunk_count": len(chunks),
+        "extracted_text_length": sum(len(str(chunk.get("content") or "")) for chunk in chunks),
+    }
 
 
 @app.get("/api/sources", response_model=SourcesListResponse)
 def list_sources(user_id: str = Depends(get_current_user_id)) -> dict[str, list[dict[str, Any]]]:
-    return {"sources": source_store.list_sources(user_id)}
+    sources = []
+    for source in source_store.list_sources(user_id):
+        try:
+            debug = _source_debug_payload(user_id=user_id, source_id=source["id"])
+            sources.append({**source, **debug, "id": source["id"], "name": source.get("name")})
+        except Exception:
+            sources.append({**source, "status": "processing", "chunk_count": 0, "extracted_text_length": 0})
+    return {"sources": sources}
+
+
+@app.get("/api/sources/{source_id}")
+def get_source(source_id: str, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    source = source_store.get_source(user_id=user_id, source_id=source_id)
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    debug = _source_debug_payload(user_id=user_id, source_id=source_id)
+    return {**source, **debug, "id": source["id"], "name": source.get("name")}
+
+
+@app.get("/api/sources/{source_id}/debug")
+def get_source_debug(source_id: str, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    payload = _source_debug_payload(user_id=user_id, source_id=source_id)
+    logger.info(
+        "Source debug user_id=%s source_id=%s status=%s chunk_count=%s extracted_text_length=%s",
+        user_id,
+        source_id,
+        payload["status"],
+        payload["chunk_count"],
+        payload["extracted_text_length"],
+    )
+    return payload
 
 
 @app.delete("/api/sources/{source_id}")
@@ -353,16 +458,41 @@ def chat(payload: ChatRequest, user_id: str = Depends(get_current_user_id)) -> d
     user_dir = _user_dir(user_id)
     store = UserVectorStore(user_dir)
 
+    logger.info("Chat request user_id=%s source_ids=%s question_len=%s", user_id, payload.sourceIds or [], len(payload.question))
+    if payload.sourceIds:
+        selected_chunk_count = sum(
+            len(db.list_chunks_by_source(user_id=user_id, source_id=source_id))
+            for source_id in payload.sourceIds
+        )
+        logger.info("Chat selected source chunk count user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, selected_chunk_count)
+        if selected_chunk_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="This source has not been processed yet or contains no readable text.",
+            )
+
     q_vec = gemini.embed_texts([payload.question])
-    chunk_ids = store.search(q_vec, k=8)
+    chunk_ids = store.search(q_vec, k=50)
+    logger.info("Chat vector search user_id=%s returned_chunk_ids=%s", user_id, len(chunk_ids))
     chunks = db.get_chunks(user_id, chunk_ids)
+    logger.info("Chat db chunks loaded user_id=%s chunk_count=%s", user_id, len(chunks))
 
     if payload.sourceIds:
         allowed = set(payload.sourceIds)
         chunks = [c for c in chunks if c["source_id"] in allowed]
+        logger.info("Chat chunks after source filter user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, len(chunks))
+        if not chunks:
+            fallback_chunks: list[dict[str, Any]] = []
+            for source_id in payload.sourceIds:
+                fallback_chunks.extend(db.list_chunks_by_source(user_id=user_id, source_id=source_id, limit=6))
+            chunks = fallback_chunks[:6]
+            logger.info("Chat fallback source chunks user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, len(chunks))
 
     if not chunks:
-        raise HTTPException(status_code=404, detail="No relevant context found. Upload sources first.")
+        raise HTTPException(
+            status_code=404,
+            detail="No relevant context was found in the selected source. Try a broader question or re-upload the document.",
+        )
 
     citations: list[dict[str, Any]] = []
     context_blocks: list[str] = []

@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { Moon, Sun, LogOut } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Card, Button } from '../components/Common';
-import { User } from '../types';
-import { useAuth } from '../src/contexts/AuthContext';
+import React, { useState } from "react";
+import { LogOut, Moon, Sun } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Button, Card, ErrorState, PageHeader } from "../components/Common";
+import { User } from "../types";
+import { useAuth } from "../src/contexts/AuthContext";
 
 interface SettingsProps {
   user: User | null;
@@ -22,53 +22,62 @@ const Settings: React.FC<SettingsProps> = ({ user, isDarkMode, toggleDarkMode })
     setIsSigningOut(true);
     try {
       await signOut();
-      navigate('/login', { replace: true });
+      navigate("/login", { replace: true });
     } catch (err) {
-      setLogoutError(err instanceof Error ? err.message : 'Failed to sign out');
+      setLogoutError(err instanceof Error ? err.message : "Failed to sign out");
     } finally {
       setIsSigningOut(false);
     }
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">Account Settings</h1>
-        <p className="text-primary font-bold mt-2">Manage your account preferences.</p>
-      </div>
+    <div className="space-y-8 pb-12">
+      <PageHeader
+        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Settings" }]}
+        eyebrow="Settings"
+        title="Account preferences"
+        description="Manage display preferences and session access."
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {logoutError && <ErrorState title="Sign out failed" message={logoutError} />}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="p-8">
-          <h3 className="text-xl font-heading font-black text-primary uppercase mb-1">Theme</h3>
-          <p className="text-sm text-primary font-bold mb-6">Toggle dark mode.</p>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-card border-[3px] border-default rounded-xl text-primary shadow-sm">
-                {isDarkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-              </div>
-              <span className="text-[14px] font-black uppercase text-primary">{isDarkMode ? 'Dark Mode' : 'Light Mode'}</span>
+          <div className="flex items-start justify-between gap-5">
+            <div>
+              <h2 className="text-2xl font-bold text-primary">Theme</h2>
+              <p className="mt-2 text-sm font-medium leading-6 text-muted">Choose the visual mode that feels best for focused study.</p>
             </div>
-            <button
-              onClick={toggleDarkMode}
-              className="w-14 h-8 rounded-full p-1 transition-colors bg-card border-[3px] border-default shadow-brutal flex items-center"
-            >
-              <div className={`w-5 h-5 bg-primary rounded-full transition-transform ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`}></div>
-            </button>
+            <div className="rounded-2xl bg-surface2 p-3 text-accent">
+              {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={toggleDarkMode}
+            aria-pressed={isDarkMode}
+            className="mt-8 flex w-full items-center justify-between rounded-3xl bg-surface2 p-4 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+          >
+            <span>
+              <span className="block text-sm font-bold text-primary">{isDarkMode ? "Dark mode" : "Light mode"}</span>
+              <span className="mt-1 block text-sm font-medium text-muted">Soft UI colors update across the app.</span>
+            </span>
+            <span className={`flex h-8 w-14 items-center rounded-full p-1 transition ${isDarkMode ? "bg-accent" : "bg-white/80"}`}>
+              <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition ${isDarkMode ? "translate-x-6" : "translate-x-0"}`} />
+            </span>
+          </button>
         </Card>
 
         <Card className="p-8">
-          <h3 className="text-xl font-heading font-black text-primary uppercase mb-1">Account</h3>
-          <p className="text-sm text-primary font-bold mb-6">Signed in as {user?.email ?? 'unknown@example.com'}</p>
-          <Button onClick={handleLogout} disabled={isSigningOut} className="inline-flex items-center gap-2 !bg-accent !text-black">
-            <LogOut className="w-5 h-5" />
-            {isSigningOut ? 'Signing Out...' : 'Logout'}
+          <h2 className="text-2xl font-bold text-primary">Account</h2>
+          <p className="mt-2 text-sm font-medium leading-6 text-muted">Signed in as {user?.email ?? "unknown@example.com"}.</p>
+          <div className="mt-8 rounded-3xl bg-surface2 p-5">
+            <p className="text-sm font-bold text-primary">{user?.name ?? "LearnBot user"}</p>
+            <p className="mt-1 text-sm font-medium text-muted">{user?.email ?? "No email available"}</p>
+          </div>
+          <Button onClick={handleLogout} disabled={isSigningOut} className="mt-6" variant="danger" icon={LogOut}>
+            {isSigningOut ? "Signing out..." : "Sign out"}
           </Button>
-          {logoutError && (
-            <p className="text-sm mt-3 font-bold text-accent">
-              {logoutError}
-            </p>
-          )}
         </Card>
       </div>
     </div>

@@ -1,8 +1,7 @@
-
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Layers, LogIn, UserPlus } from "lucide-react";
-import { Button, Card, Input } from "../components/Common";
+import { Button, Card, ErrorState, Input } from "../components/Common";
 import { useAuth } from "../src/contexts/AuthContext";
 import { supabase } from "../src/lib/supabase";
 
@@ -21,7 +20,7 @@ const Login: React.FC = () => {
 
   const redirectPath = useMemo(() => {
     const from = (location.state as { from?: string } | null)?.from;
-    return from || "/app/chat";
+    return from || "/app/dashboard";
   }, [location.state]);
 
   React.useEffect(() => {
@@ -78,30 +77,30 @@ const Login: React.FC = () => {
     }
   };
 
+  const title = mode === "login" ? "Welcome back" : mode === "signup" ? "Create account" : "Reset password";
+  const description =
+    mode === "login"
+      ? "Sign in to continue learning with LearnBot."
+      : mode === "signup"
+        ? "Create your LearnBot workspace."
+        : "Enter your email and we will send you a reset link.";
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <div className="flex flex-col items-center mb-10">
-          <div className="w-20 h-20 bg-accent rounded-[2rem] border-[4px] border-default shadow-brutal flex items-center justify-center mb-6 transform -rotate-3 hover:rotate-0 transition-transform">
-            <Layers className="text-black w-10 h-10" />
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
+            <Layers className="h-10 w-10" />
           </div>
-          <h1 className="text-4xl font-heading font-black text-primary uppercase tracking-tight">
-            {mode === "login" ? "Welcome Back" : mode === "signup" ? "Create Account" : "Reset password"}
-          </h1>
-          <p className="text-primary font-bold mt-3">
-            {mode === "login"
-              ? "Sign in to your LearnBot account"
-              : mode === "signup"
-                ? "Start your learning journey with LearnBot"
-                : "Enter your email and we'll send you a reset link."}
-          </p>
+          <h1 className="font-heading text-4xl font-bold tracking-tight text-primary">{title}</h1>
+          <p className="mt-3 text-sm font-medium leading-6 text-muted">{description}</p>
         </div>
 
         <Card className="p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             {mode === "signup" && (
               <Input
-                label="Full Name"
+                label="Full name"
                 type="text"
                 placeholder="Jane Doe"
                 required
@@ -110,71 +109,55 @@ const Login: React.FC = () => {
                 disabled={submitting}
               />
             )}
-            {mode === "reset" && (
-              <Input 
-                label="Email Address" 
-                type="email" 
-                placeholder="jane@example.com" 
-                required 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={submitting}
-              />
-            )}
-            {mode !== "reset" && (
-              <>
-            <Input 
-              label="Email Address" 
-              type="email" 
-              placeholder="jane@example.com" 
-              required 
+            <Input
+              label="Email address"
+              type="email"
+              placeholder="jane@example.com"
+              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}
             />
-            <div className="space-y-2 w-full">
-              <label className="text-[12px] font-black text-primary uppercase tracking-[0.2em] ml-2">Password</label>
-              <div className="relative">
-                <input
-                  className="
-                    w-full px-5 py-4 pr-12 bg-card border-[3px] border-default
-                    rounded-xl focus:border-accent transition-all outline-none text-primary font-bold placeholder-muted
-                  "
-                  type={passwordVisible ? "text" : "password"}
-                  placeholder="••••••••"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={submitting}
-                />
-                <button
-                  type="button"
-                  onClick={() => setPasswordVisible((v) => !v)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-primary hover:text-accent transition-colors"
-                  aria-label={passwordVisible ? "Hide password" : "Show password"}
-                  disabled={submitting}
-                >
-                  {passwordVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            {mode !== "reset" && (
+              <div className="w-full space-y-2">
+                <label className="ml-1 text-sm font-semibold text-primary">Password</label>
+                <div className="relative">
+                  <input
+                    className="w-full rounded-2xl border border-white/70 bg-white/70 px-4 py-3 pr-12 text-sm font-semibold text-primary outline-none transition-all placeholder:text-muted focus:border-accent focus:bg-white focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--accent)_16%,transparent)] dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10"
+                    type={passwordVisible ? "text" : "password"}
+                    placeholder="Password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    disabled={submitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPasswordVisible((visible) => !visible)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg text-primary transition-colors hover:text-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+                    aria-label={passwordVisible ? "Hide password" : "Show password"}
+                    disabled={submitting}
+                  >
+                    {passwordVisible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
               </div>
-            </div>
-              </>
             )}
-            
-            <Button type="submit" className="w-full py-3" disabled={submitting}>
-              {mode === "login" ? <LogIn className="w-4 h-4 mr-2" /> : mode === "signup" ? <UserPlus className="w-4 h-4 mr-2" /> : null}
+
+            <Button type="submit" className="w-full" disabled={submitting} icon={mode === "login" ? LogIn : mode === "signup" ? UserPlus : undefined}>
               {submitting
                 ? mode === "login"
-                  ? "Signing In..."
+                  ? "Signing in..."
                   : mode === "signup"
-                    ? "Signing Up..."
+                    ? "Signing up..."
                     : "Sending..."
                 : mode === "login"
-                  ? "Sign In"
+                  ? "Sign in"
                   : mode === "signup"
-                    ? "Sign Up"
+                    ? "Sign up"
                     : "Send reset link"}
             </Button>
+
             {mode === "login" && (
               <p className="text-right text-sm">
                 <button
@@ -184,39 +167,33 @@ const Login: React.FC = () => {
                     setError("");
                     setSuccess("");
                   }}
-                  className="text-primary font-bold hover:text-accent hover:underline"
+                  className="rounded-lg font-bold text-primary hover:text-accent hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
                 >
                   Forgot password?
                 </button>
               </p>
             )}
-            {error && <p className="text-sm text-accent text-center">{error}</p>}
-            {success && <p className="text-sm text-primary text-center">{success}</p>}
+            {error && <ErrorState title="Authentication failed" message={error} embedded />}
+            {success && <p className="text-center text-sm font-semibold text-primary">{success}</p>}
           </form>
 
           {mode !== "reset" && (
             <>
               <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center"><div className="w-full border-t-[3px] border-default"></div></div>
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-default" /></div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-4 py-1 bg-card border-[3px] border-default font-black uppercase text-[10px] tracking-widest text-primary">Or continue with</span>
+                  <span className="rounded-full border border-default bg-card px-4 py-1 text-xs font-bold text-primary">Or continue with</span>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={submitting}
-                className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-card border-[3px] border-default text-primary rounded-xl hover:-translate-y-1 hover:shadow-brutal hover:text-black hover:bg-yellow transition-all active:translate-y-0 active:shadow-none font-black uppercase tracking-widest text-[12px]"
-              >
-                <Layers className="w-5 h-5" />
-                <span>Google</span>
-              </button>
+              <Button type="button" onClick={handleGoogleSignIn} disabled={submitting} variant="soft" className="w-full" icon={Layers}>
+                Google
+              </Button>
             </>
           )}
 
           {(mode === "login" || mode === "signup") && (
-            <p className="mt-8 text-sm text-center text-primary font-bold">
+            <p className="mt-8 text-center text-sm font-medium text-muted">
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <button
                 type="button"
@@ -225,14 +202,14 @@ const Login: React.FC = () => {
                   setError("");
                   setSuccess("");
                 }}
-                className="font-black text-accent hover:text-primary hover:underline ml-2"
+                className="ml-1 rounded-lg font-bold text-accent hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
               >
                 {mode === "login" ? "Create account" : "Sign in"}
               </button>
             </p>
           )}
           {mode === "reset" && (
-            <p className="mt-4 text-sm text-center text-primary font-bold">
+            <p className="mt-4 text-center text-sm font-medium text-muted">
               <button
                 type="button"
                 onClick={() => {
@@ -240,9 +217,9 @@ const Login: React.FC = () => {
                   setError("");
                   setSuccess("");
                 }}
-                className="font-black text-accent hover:text-primary hover:underline"
+                className="rounded-lg font-bold text-accent hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
               >
-                Back to Sign in
+                Back to sign in
               </button>
             </p>
           )}
@@ -253,4 +230,3 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-

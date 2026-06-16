@@ -1,266 +1,312 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Clipboard, FileText, Layers, Loader2, MessageSquare, Save, Send, Sparkles } from "lucide-react";
+import { Badge, Button, Card, EmptyState, ErrorState, PageHeader } from "../components/Common";
+import { useLearningData } from "../src/contexts/LearningDataContext";
+import { askAiWithSources } from "../src/services/aiService";
+import { getSourceDebug } from "../src/lib/api";
+import { AppRoute } from "../types";
+import { Link } from "react-router-dom";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, FileText, Loader2, Sparkles } from 'lucide-react';
-import { Card, Badge } from '../components/Common';
-import { Message, Source } from '../types';
-import { apiFetch, normalizeSources, parseSourcesList } from '../src/lib/api';
-import { getBool, setBool } from '../src/lib/uiPrefs';
+const suggestedPrompts = [
+  "Summarize the selected source into five study bullets.",
+  "Explain the hardest concept with a concrete example.",
+  "What should I review before taking a quiz?",
+  "Turn this source into a short study plan.",
+];
 
-const CHAT_SIDEBAR_COLLAPSED_KEY = "learnbot_chat_sidebar_collapsed";
-const CHAT_CONTEXT_COLLAPSED_KEY = "learnbot_chat_context_collapsed";
-
-function getInitialSidebarCollapsed(): boolean {
-  if (typeof window === "undefined") return false;
-  const hasSavedPref = window.localStorage.getItem(CHAT_SIDEBAR_COLLAPSED_KEY) !== null;
-  if (!hasSavedPref && window.innerWidth < 768) return true;
-  return getBool(CHAT_SIDEBAR_COLLAPSED_KEY, false);
-}
+const formatTime = (value: Date | string) =>
+  new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 const Chat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: "Welcome. I've synced your knowledge bank. How can I assist with your study today?",
-      timestamp: new Date()
-    }
-  ]);
-  const [inputValue, setInputValue] = useState('');
+  const data = useLearningData();
+  const [sessionId, setSessionId] = useState(() => data.chatSessions[0]?.id ?? "");
+  const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [sources, setSources] = useState<Source[]>([]);
-  const [sourcesLoading, setSourcesLoading] = useState(false);
-  const [sourcesError, setSourcesError] = useState<string | null>(null);
   const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>([]);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => getInitialSidebarCollapsed());
-  const [contextCollapsed, setContextCollapsed] = useState<boolean>(() => getBool(CHAT_CONTEXT_COLLAPSED_KEY, false));
   const scrollRef = useRef<HTMLDivElement>(null);
-  const isSidebarHidden = sidebarCollapsed || contextCollapsed;
 
-  async function fetchSources() {
-    setSourcesLoading(true);
-    setSourcesError(null);
+  const sortedSessions = useMemo(
+    () => [...data.chatSessions].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [data.chatSessions],
+  );
+  const session = useMemo(
+    () => data.chatSessions.find((item) => item.id === sessionId) ?? sortedSessions[0],
+    [data.chatSessions, sessionId, sortedSessions],
+  );
+  const readySources = useMemo(() => data.sources.filter((source) => source.status === "ready"), [data.sources]);
+  const activeSourceIds = useMemo(
+    () => (selectedSourceIds.length ? selectedSourceIds : readySources.map((source) => source.id)),
+    [readySources, selectedSourceIds],
+  );
+  const activeSources = useMemo(
+    () => data.sources.filter((source) => activeSourceIds.includes(source.id)),
+    [data.sources, activeSourceIds],
+  );
+  const selectedHasNoChunks = activeSources.some(
+    (source) => source.id.startsWith("source-") || source.status !== "ready" || source.chunkCount === 0 || source.extractedTextLength === 0,
+  );
 
-    try {
-      const res = await apiFetch('/api/sources', { credentials: "include" });
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Failed to load sources (${res.status}): ${text}`);
-      }
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [session?.messages, isLoading]);
 
-      const json = await res.json();
-      const rawList = parseSourcesList(json);
-      const normalized = normalizeSources(rawList);
-      setSources(normalized);
-    } catch (e: any) {
-      setSourcesError(`Failed to load sources: ${e?.message ?? "Unknown error"}`);
-    } finally {
-      setSourcesLoading(false);
+  useEffect(() => {
+    if (!sessionId && data.chatSessions.length === 0) {
+      setSessionId(data.createChatSession().id);
+    } else if (!sessionId && data.chatSessions[0]) {
+      setSessionId(data.chatSessions[0].id);
     }
-  }
+  }, [data, sessionId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshSourceDebug = async () => {
+      for (const source of activeSources) {
+        if (!source.id || source.id.startsWith("source-")) continue;
+        if (source.chunkCount !== undefined && source.extractedTextLength !== undefined) continue;
+        try {
+          const debug = await getSourceDebug(source.id);
+          if (cancelled) return;
+          data.updateSource(source.id, {
+            status: debug.status,
+            chunkCount: debug.chunk_count,
+            extractedTextLength: debug.extracted_text_length,
+            processingError: debug.error,
+          });
+        } catch {
+          if (cancelled) return;
+          data.updateSource(source.id, {
+            status: "failed",
+            chunkCount: 0,
+            extractedTextLength: 0,
+            processingError: "This source has not been processed yet or contains no readable text.",
+          });
+        }
+      }
+    };
+    void refreshSourceDebug();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSources, data]);
 
   const toggleSourceSelection = (sourceId: string) => {
-    setSelectedSourceIds((prev) =>
-      prev.includes(sourceId) ? prev.filter((id) => id !== sourceId) : [...prev, sourceId]
-    );
+    setSelectedSourceIds((prev) => (prev.includes(sourceId) ? prev.filter((id) => id !== sourceId) : [...prev, sourceId]));
   };
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim() || isLoading) return;
-
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: inputValue,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setInputValue('');
-    setIsLoading(true);
+  const startNewChat = () => {
+    const next = data.createChatSession(activeSourceIds);
+    setSessionId(next.id);
     setChatError(null);
+  };
 
+  const handleSendMessage = async (override?: string) => {
+    const content = (override ?? inputValue).trim();
+    if (!content || isLoading || !session || readySources.length === 0 || selectedHasNoChunks) return;
+    setChatError(null);
+    data.addChatMessage(session.id, { role: "user", content, sourceIds: activeSourceIds });
+    setInputValue("");
+    setIsLoading(true);
     try {
-      const sourceIds = selectedSourceIds.length > 0
-        ? selectedSourceIds
-        : sources.map((s) => s.id);
-      const res = await apiFetch('/api/chat', {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          question: userMsg.content,
-          sourceIds,
-        }),
+      const result = await askAiWithSources(content, activeSourceIds);
+      data.addChatMessage(session.id, {
+        role: "assistant",
+        content: result.answer,
+        citations: result.citations.map((citation) => ({
+          title: citation.title ?? citation.source_name ?? "Source",
+          snippet: citation.snippet,
+          pageNumber: citation.pageNumber ?? citation.page ?? undefined,
+        })),
+        sourceIds: activeSourceIds,
       });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Chat failed (${res.status}): ${text}`);
-      }
-
-      const response = await res.json();
-      const assistantMsg: Message = {
-        id: String(response.answer_id ?? Date.now() + 1),
-        role: 'assistant',
-        content: String(response.answer ?? "I apologize, I couldn't process that."),
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, assistantMsg]);
     } catch (error) {
-      console.error(error);
-      setChatError(error instanceof Error ? error.message : "Failed to send message");
+      const sourceNames = readySources.filter((source) => activeSourceIds.includes(source.id)).map((source) => source.name).join(", ");
+      data.addChatMessage(session.id, {
+        role: "assistant",
+        content: `I saved your question, but the AI service was not reachable. Selected context: ${sourceNames || "all ready sources"}.`,
+        sourceIds: activeSourceIds,
+      });
+      setChatError(error instanceof Error ? error.message : "AI request failed");
     } finally {
       setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchSources();
-  }, []);
-
-  useEffect(() => {
-    setBool(CHAT_SIDEBAR_COLLAPSED_KEY, sidebarCollapsed);
-  }, [sidebarCollapsed]);
-
-  useEffect(() => {
-    setBool(CHAT_CONTEXT_COLLAPSED_KEY, contextCollapsed);
-  }, [contextCollapsed]);
-
-  useEffect(() => {
-    const onPrefsChanged = () => {
-      setSidebarCollapsed(getBool(CHAT_SIDEBAR_COLLAPSED_KEY, false));
-      setContextCollapsed(getBool(CHAT_CONTEXT_COLLAPSED_KEY, false));
-    };
-    window.addEventListener("ui-prefs-changed", onPrefsChanged as EventListener);
-    return () => window.removeEventListener("ui-prefs-changed", onPrefsChanged as EventListener);
-  }, []);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
   return (
-    <div className="flex h-[calc(100vh-160px)] gap-6">
-      {/* Sidebar Sources - Minimalist Pastel */}
-      <div
-        className={`hidden md:flex flex-col gap-6 overflow-hidden transition-[width,opacity] duration-200 ease-in-out ${
-          isSidebarHidden ? 'w-0 opacity-0 pointer-events-none' : 'w-72 opacity-100'
-        }`}
-      >
-        <div className="w-72">
-          <h3 className="text-[11px] font-black text-muted uppercase tracking-[0.25em] px-4">Active Context</h3>
-          <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-            <button
-              onClick={() => setSelectedSourceIds([])}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 border-[3px] border-default shadow-[4px_4px_0px_0px_var(--shadow)] ${selectedSourceIds.length === 0
-                ? 'bg-yellow text-black translate-x-1 translate-y-1 shadow-none'
-                : 'bg-card text-primary hover:text-black hover:bg-yellow hover:-translate-y-1 hover:shadow-brutal'}`}
-            >
-              <div className={`p-2 rounded-xl border-[2px] border-default bg-card`}>
-                <Sparkles className="w-5 h-5 text-current" />
-              </div>
-              <span className="text-[12px] font-black truncate uppercase tracking-widest text-current">All Sources</span>
-            </button>
-            {sources.map(source => (
-              <button
-                key={source.id}
-                onClick={() => toggleSourceSelection(source.id)}
-                className={`w-full flex items-center gap-4 px-6 py-4 rounded-[1.8rem] text-left transition-all duration-300 border-[3px] border-default shadow-[4px_4px_0px_0px_var(--shadow)] ${selectedSourceIds.includes(source.id)
-                  ? 'bg-yellow text-black translate-x-1 translate-y-1 shadow-none' 
-                  : 'bg-card text-primary hover:text-black hover:bg-yellow hover:-translate-y-1 hover:shadow-brutal'}`}
-              >
-                <div className={`p-2 rounded-xl border-[2px] border-default bg-card`}>
-                  <FileText className="w-5 h-5 text-current" />
-                </div>
-                <span className="text-[12px] font-black truncate uppercase tracking-widest text-current">{source.name}</span>
-              </button>
-            ))}
-            {sourcesLoading && <div className="px-4 text-[11px] text-muted font-bold uppercase tracking-widest">Loading sources...</div>}
-            {sourcesError && <div className="px-4 text-[11px] font-bold" style={{ color: "red" }}>{sourcesError}</div>}
-          </div>
-        </div>
-      </div>
+    <div className="flex min-h-[calc(100vh-150px)] flex-col gap-6 pb-6">
+      <PageHeader
+        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Chat" }]}
+        eyebrow="Assistant"
+        title="Chat with your sources"
+        description="Select context, keep conversation history, and turn useful answers into notes or cards."
+        action={<Button variant="soft" icon={MessageSquare} onClick={startNewChat}>New chat</Button>}
+      />
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full">
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 space-y-12 py-6 custom-scrollbar scroll-smooth">
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] ${msg.role === 'user' ? 'flex flex-col items-end' : 'flex gap-5'}`}>
-                <div className={`
-                  px-8 py-5 rounded-[2.5rem] font-bold text-[15px] leading-relaxed border-[3px] border-default shadow-brutal
-                  ${msg.role === 'user' 
-                    ? 'bg-secondary text-black rounded-tr-none' 
-                    : 'bg-card text-primary rounded-tl-none'}
-                `}>
-                  {msg.content}
-                </div>
-                <p className="text-[9px] font-black text-muted uppercase tracking-widest mt-2 px-4 opacity-60">
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-card px-8 py-5 rounded-[2.5rem] rounded-tl-none border-[3px] border-default shadow-brutal">
-                <Loader2 className="w-5 h-5 animate-spin text-primary" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input Bar - White and Soft Neutrals */}
-        <div className="pt-8">
-          <div
-            className={`mb-4 px-2 overflow-hidden transition-[max-height,opacity] duration-200 ease-in-out ${
-              contextCollapsed ? 'max-h-0 opacity-0 pointer-events-none' : 'max-h-60 opacity-100'
-            }`}
-          >
-            <Card className="p-4 !rounded-[1.8rem]">
-              <p className="text-[10px] font-black text-muted uppercase tracking-widest mb-3">
-                Sources for this chat
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {sources.map((source) => (
+      <div className="grid min-h-0 flex-1 gap-6 lg:grid-cols-[19rem_1fr]">
+        <aside className="grid gap-4 lg:min-h-0">
+          <Card className="p-4">
+            <h2 className="px-2 text-sm font-bold text-muted">Chat history</h2>
+            <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1 custom-scrollbar lg:max-h-56">
+              {sortedSessions.length ? (
+                sortedSessions.map((item) => (
                   <button
-                    key={`picker-${source.id}`}
-                    onClick={() => toggleSourceSelection(source.id)}
-                    className={`px-4 py-2 rounded-2xl text-[11px] font-black uppercase tracking-widest border-[3px] border-default shadow-sm transition-all ${
-                      selectedSourceIds.includes(source.id)
-                        ? 'bg-accent text-black translate-y-1 shadow-none'
-                        : 'bg-card text-primary hover:text-black hover:-translate-y-1 hover:bg-yellow hover:shadow-brutal'
-                    }`}
+                    key={item.id}
+                    type="button"
+                    onClick={() => setSessionId(item.id)}
+                    className={`w-full rounded-2xl p-3 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${item.id === session?.id ? "bg-accent text-white" : "bg-surface2 text-primary hover:bg-accent/10"}`}
                   >
-                    {source.name}
+                    <p className="line-clamp-1 text-sm font-bold">{item.title}</p>
+                    <p className={`mt-1 text-xs font-semibold ${item.id === session?.id ? "text-white/75" : "text-muted"}`}>
+                      {item.messages.length} messages · {new Date(item.updatedAt).toLocaleDateString()}
+                    </p>
+                  </button>
+                ))
+              ) : (
+                <p className="px-2 py-3 text-sm font-medium text-muted">No chat history yet.</p>
+              )}
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <h2 className="px-2 text-sm font-bold text-muted">Source context</h2>
+            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedSourceIds([])}
+                className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${selectedSourceIds.length === 0 ? "bg-accent text-white" : "bg-surface2 text-primary"}`}
+              >
+                <Sparkles className="h-4 w-4" />
+                All ready sources
+              </button>
+              {readySources.map((source) => (
+                <button
+                  key={source.id}
+                  type="button"
+                  onClick={() => toggleSourceSelection(source.id)}
+                  className={`flex w-full items-center gap-3 rounded-2xl p-3 text-left text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${selectedSourceIds.includes(source.id) ? "bg-accent text-white" : "bg-surface2 text-primary"}`}
+                >
+                  <FileText className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{source.name}</span>
+                </button>
+              ))}
+              {!readySources.length && (
+                <EmptyState
+                  title="No ready sources"
+                  description="Upload a source before asking grounded questions."
+                  action={<Link to={AppRoute.UPLOAD}><Button variant="soft">Upload</Button></Link>}
+                  embedded
+                />
+              )}
+              {readySources.length > 0 && selectedHasNoChunks && (
+                <ErrorState
+                  title="Source is not chat-ready"
+                  message="This source has not been processed yet or contains no readable text."
+                  embedded
+                />
+              )}
+            </div>
+          </Card>
+        </aside>
+
+        <div className="flex min-h-[36rem] flex-col">
+          {chatError && <div className="mb-4"><ErrorState title="AI response failed" message={chatError} /></div>}
+
+          <Card className="flex min-h-0 flex-1 flex-col p-4">
+            <div ref={scrollRef} className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-2 custom-scrollbar" aria-live="polite">
+              {!session || session.messages.length === 0 ? (
+                <EmptyState
+                  title="Start a study chat"
+                  description="Ask LearnBot to summarize, explain, quiz, or extract flashcards from your selected sources."
+                  action={<Button variant="soft" onClick={() => handleSendMessage(suggestedPrompts[0])}>Use a prompt</Button>}
+                  embedded
+                />
+              ) : (
+                session.messages.map((message) => (
+                  <div key={message.id} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[88%] rounded-3xl p-5 shadow-sm md:max-w-[78%] ${message.role === "user" ? "bg-accent text-white" : "bg-surface2 text-primary"}`}>
+                      <div className="mb-2 flex items-center justify-between gap-4">
+                        <span className={`text-xs font-bold ${message.role === "user" ? "text-white/75" : "text-muted"}`}>
+                          {message.role === "user" ? "You" : "LearnBot"}
+                        </span>
+                        <time className={`text-xs font-semibold ${message.role === "user" ? "text-white/70" : "text-muted"}`}>
+                          {formatTime(message.timestamp)}
+                        </time>
+                      </div>
+                      <p className="whitespace-pre-wrap text-sm font-semibold leading-6">{message.content}</p>
+                      {message.citations?.length ? (
+                        <div className="mt-4 space-y-2">
+                          {message.citations.map((citation, index) => (
+                            <div key={`${message.id}-${index}`} className="rounded-2xl bg-card p-3 text-xs font-medium text-muted">
+                              <span className="font-bold text-primary">{citation.title}</span>: {citation.snippet}
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {message.role === "assistant" && (
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          <Button variant="soft" className="min-h-8 px-3 py-1 text-xs" icon={Clipboard} onClick={() => navigator.clipboard?.writeText(message.content)}>Copy</Button>
+                          <Button variant="soft" className="min-h-8 px-3 py-1 text-xs" icon={Save} onClick={() => data.saveMessageAsNote(session.id, message.id)}>{message.savedAsNote ? "Saved" : "Save note"}</Button>
+                          <Button variant="soft" className="min-h-8 px-3 py-1 text-xs" icon={Layers} onClick={() => data.createFlashcardsFromMessage(session.id, message.id)}>Create cards</Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+              {isLoading && (
+                <div className="flex justify-start">
+                  <div className="inline-flex items-center gap-2 rounded-3xl bg-surface2 px-5 py-4 text-sm font-bold text-muted">
+                    <Loader2 className="h-4 w-4 animate-spin text-accent" />
+                    LearnBot is typing
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 space-y-4 border-t border-white/50 pt-4">
+              <div className="flex flex-wrap gap-2">
+                {suggestedPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    disabled={readySources.length === 0 || isLoading || selectedHasNoChunks}
+                    onClick={() => handleSendMessage(prompt)}
+                    className="rounded-full bg-card px-4 py-2 text-sm font-bold text-primary transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {prompt}
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] font-bold text-muted mt-3">If none selected, all sources are used.</p>
-            </Card>
-          </div>
-          {chatError && <div className="px-3 pb-3 text-sm" style={{ color: "red" }}>{chatError}</div>}
-          <Card className="p-2 !bg-card !rounded-[2.8rem]">
-            <div className="flex items-center gap-3 p-1">
-              <input 
-                placeholder="Ask your assistant anything..." 
-                className="flex-1 px-8 py-5 bg-transparent text-primary placeholder:text-muted outline-none font-bold text-[15px]"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                disabled={isLoading}
-              />
-              <button 
-                onClick={handleSendMessage} 
-                className={`p-5 rounded-[2.2rem] border-[3px] border-default transition-all ${!inputValue.trim() || isLoading ? 'bg-surface2 text-muted' : 'bg-accent text-black shadow-[4px_4px_0px_0px_var(--shadow)] hover:-translate-y-1 hover:shadow-brutal active:translate-y-1 active:shadow-none'}`}
-              >
-                <Send className="w-6 h-6 text-black" />
-              </button>
+              <div className="flex items-center gap-2 rounded-3xl bg-card p-2">
+                <input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) handleSendMessage();
+                  }}
+                  aria-label="Ask LearnBot"
+                  placeholder={
+                    !readySources.length
+                      ? "Upload a source to start chatting"
+                      : selectedHasNoChunks
+                        ? "This source is not ready for chat"
+                        : "Ask a question about your selected sources"
+                  }
+                  className="min-w-0 flex-1 bg-transparent px-4 py-3 text-sm font-semibold text-primary outline-none placeholder:text-muted focus-visible:ring-0"
+                  disabled={isLoading || readySources.length === 0 || selectedHasNoChunks}
+                />
+                <Button onClick={() => handleSendMessage()} disabled={!inputValue.trim() || isLoading || readySources.length === 0 || selectedHasNoChunks} icon={Send} aria-label="Send message">
+                  <span className="hidden sm:inline">Send</span>
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:hidden">
+                {readySources.map((source) => (
+                  <button key={source.id} type="button" onClick={() => toggleSourceSelection(source.id)} aria-pressed={selectedSourceIds.includes(source.id)}>
+                    <Badge color={selectedSourceIds.includes(source.id) ? "purple" : "gray"}>{source.name}</Badge>
+                  </button>
+                ))}
+              </div>
             </div>
           </Card>
         </div>
@@ -270,4 +316,3 @@ const Chat: React.FC = () => {
 };
 
 export default Chat;
-
