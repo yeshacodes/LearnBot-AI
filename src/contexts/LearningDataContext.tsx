@@ -8,7 +8,6 @@ import type {
   FlashcardReviewRating,
   Material,
   QuizAttempt,
-  QuizDifficulty,
   QuizQuestion,
   Source,
   SourceType,
@@ -17,8 +16,11 @@ import type {
 import { buildLocalSourceSummary } from "../services/aiService";
 import { calculateMasteryScore, calculateNextReviewDate } from "../logic/learning";
 import { useAuth } from "./AuthContext";
+import { API_ROUTES, apiFetch, isBackendSourceId, normalizeSources, parseSourcesList } from "../lib/api";
 
 type LearningState = {
+  ownerId: string;
+  mode: "authenticated" | "guest";
   sources: Source[];
   materials: Material[];
   quizQuestions: QuizQuestion[];
@@ -45,6 +47,8 @@ type LearningDataValue = LearningState & {
   updateSource: (sourceId: string, updates: Partial<Source>) => void;
   deleteSource: (sourceId: string) => void;
   createDeckFromSource: (sourceId: string, name?: string) => FlashcardDeck | null;
+  setGeneratedQuizQuestions: (questions: QuizQuestion[]) => void;
+  addGeneratedDeck: (deck: FlashcardDeck, cards: Flashcard[]) => void;
   reviewFlashcard: (flashcardId: string, rating: FlashcardReviewRating) => void;
   saveQuizAttempt: (quizId: string, answers: Record<string, number>, questions: QuizQuestion[]) => QuizAttempt;
   createChatSession: (sourceIds?: string[]) => ChatSession;
@@ -55,55 +59,62 @@ type LearningDataValue = LearningState & {
 
 const STORAGE_VERSION = "v2";
 const LearningDataContext = createContext<LearningDataValue | undefined>(undefined);
+const LEGACY_DEMO_QUESTION_IDS = new Set(["q-active-recall", "q-spacing", "q-source-grounding", "q-transfer"]);
 
 const nowIso = () => new Date().toISOString();
 const newId = (prefix: string) =>
   typeof crypto !== "undefined" && "randomUUID" in crypto ? `${prefix}-${crypto.randomUUID()}` : `${prefix}-${Date.now()}`;
 
-const baseQuestions: QuizQuestion[] = [
-  {
-    id: "q-active-recall",
-    topic: "Active Recall",
-    difficulty: "easy",
-    prompt: "What is the main value of active recall?",
-    choices: ["It replaces sleep", "It strengthens retrieval", "It removes the need for notes", "It only works for math"],
-    correctChoiceIndex: 1,
-    explanation: "Active recall strengthens memory by making your brain retrieve information instead of rereading it passively.",
-  },
-  {
-    id: "q-spacing",
-    topic: "Spaced Repetition",
-    difficulty: "medium",
-    prompt: "Why should difficult cards return sooner?",
-    choices: ["They are prettier", "They need more retrieval practice", "They should be archived", "They use fewer tags"],
-    correctChoiceIndex: 1,
-    explanation: "Lower-confidence cards need shorter review intervals so the memory trace is rebuilt before it fades.",
-  },
-  {
-    id: "q-source-grounding",
-    topic: "Source Grounding",
-    difficulty: "medium",
-    prompt: "What makes an AI study answer more trustworthy?",
-    choices: ["More adjectives", "A selected source context", "Longer paragraphs", "No citations"],
-    correctChoiceIndex: 1,
-    explanation: "Grounding answers in selected sources reduces drift and helps you trace claims back to uploaded material.",
-  },
-  {
-    id: "q-transfer",
-    topic: "Transfer",
-    difficulty: "hard",
-    prompt: "Which activity best tests transfer?",
-    choices: ["Copying definitions", "Applying a concept to a new example", "Renaming a deck", "Changing the theme"],
-    correctChoiceIndex: 1,
-    explanation: "Transfer means using a concept in a new situation, which is deeper than recognition or copying.",
-  },
-];
+const ownerMode = (ownerId: string): LearningState["mode"] => (ownerId === "guest" ? "guest" : "authenticated");
 
-function buildInitialState(): LearningState {
+const belongsToOwner = <T extends { ownerId?: string }>(item: T, ownerId: string) => item.ownerId === ownerId;
+
+function withOwner<T extends { ownerId?: string }>(item: T, ownerId: string): T {
+  return { ...item, ownerId };
+}
+
+function removeSourceReferences(state: LearningState, sourceId: string): LearningState {
+  const removedDeckIds = new Set(state.flashcardDecks.filter((deck) => deck.sourceId === sourceId).map((deck) => deck.id));
+  const removedCardIds = new Set(
+    state.flashcards
+      .filter((card) => card.sourceId === sourceId || (card.deckId ? removedDeckIds.has(card.deckId) : false))
+      .map((card) => card.id),
+  );
+
   return {
+    ...state,
+    sources: state.sources.filter((source) => source.id !== sourceId),
+    materials: state.materials.filter((material) => material.sourceId !== sourceId),
+    quizQuestions: state.quizQuestions.filter((question) => question.sourceId !== sourceId),
+    flashcardDecks: state.flashcardDecks.filter((deck) => deck.sourceId !== sourceId),
+    flashcards: state.flashcards.filter((card) => !removedCardIds.has(card.id)),
+    flashcardReviews: state.flashcardReviews.filter((review) => !removedCardIds.has(review.flashcardId)),
+    chatSessions: state.chatSessions.map((session) => ({
+      ...session,
+      sourceIds: session.sourceIds.filter((id) => id !== sourceId),
+      messages: session.messages.map((message) => ({
+        ...message,
+        sourceIds: message.sourceIds?.filter((id) => id !== sourceId),
+      })),
+    })),
+  };
+}
+
+function removeStalePlaceholderSources(state: LearningState): LearningState {
+  const staleIds = state.sources
+    .filter((source) => source.id.startsWith("source-") && !isBackendSourceId(source.id) && (source.status === "failed" || (source.chunkCount ?? 0) === 0))
+    .map((source) => source.id);
+
+  return staleIds.reduce((nextState, sourceId) => removeSourceReferences(nextState, sourceId), state);
+}
+
+function buildInitialState(ownerId = "guest"): LearningState {
+  return {
+    ownerId,
+    mode: ownerMode(ownerId),
     sources: [],
     materials: [],
-    quizQuestions: baseQuestions,
+    quizQuestions: [],
     quizAttempts: [],
     flashcardDecks: [],
     flashcards: [],
@@ -113,57 +124,141 @@ function buildInitialState(): LearningState {
   };
 }
 
-function reviveState(state: LearningState): LearningState {
+function sanitizeOwnedState(state: LearningState, ownerId: string): LearningState {
+  if (state.ownerId && state.ownerId !== ownerId) {
+    return buildInitialState(ownerId);
+  }
+
+  const sources = state.sources.filter((source) => belongsToOwner(source, ownerId));
+  const sourceIds = new Set(sources.map((source) => source.id));
+  const materials = state.materials.filter((material) => belongsToOwner(material, ownerId) && sourceIds.has(material.sourceId));
+  const quizQuestions = state.quizQuestions.filter((question) => belongsToOwner(question, ownerId) && (!question.sourceId || sourceIds.has(question.sourceId)));
+  const flashcardDecks = state.flashcardDecks.filter((deck) => belongsToOwner(deck, ownerId) && (!deck.sourceId || sourceIds.has(deck.sourceId)));
+  const deckIds = new Set(flashcardDecks.map((deck) => deck.id));
+  const flashcards = state.flashcards.filter((card) => belongsToOwner(card, ownerId) && (!card.sourceId || sourceIds.has(card.sourceId)) && (!card.deckId || deckIds.has(card.deckId)));
+  const cardIds = new Set(flashcards.map((card) => card.id));
+
   return {
     ...state,
-    chatSessions: state.chatSessions.map((session) => ({
-      ...session,
-      messages: session.messages.map((message) => ({
-        ...message,
-        timestamp: new Date(message.timestamp),
+    ownerId,
+    mode: ownerMode(ownerId),
+    sources,
+    materials,
+    quizQuestions,
+    quizAttempts: state.quizAttempts.filter((attempt) => belongsToOwner(attempt, ownerId)),
+    flashcardDecks,
+    flashcards,
+    flashcardReviews: state.flashcardReviews.filter((review) => belongsToOwner(review, ownerId) && cardIds.has(review.flashcardId)),
+    chatSessions: state.chatSessions
+      .filter((session) => belongsToOwner(session, ownerId))
+      .map((session) => ({
+        ...session,
+        sourceIds: session.sourceIds.filter((id) => sourceIds.has(id)),
+        messages: session.messages.map((message) => ({
+          ...message,
+          sourceIds: message.sourceIds?.filter((id) => sourceIds.has(id)),
+        })),
       })),
-    })),
+    studyGoals: state.studyGoals.filter((goal) => belongsToOwner(goal, ownerId)),
   };
 }
 
+function reviveState(state: LearningState, ownerId: string): LearningState {
+  const normalized: LearningState = {
+    ...state,
+    ownerId: state.ownerId ?? ownerId,
+    mode: state.mode ?? ownerMode(ownerId),
+    sources: (state.sources ?? []).map((source) => withOwner(source, source.ownerId ?? "")),
+    materials: (state.materials ?? []).map((material) => withOwner(material, material.ownerId ?? "")),
+    quizQuestions: (state.quizQuestions ?? []).filter((question) => !LEGACY_DEMO_QUESTION_IDS.has(question.id)).map((question) => withOwner(question, question.ownerId ?? "")),
+    quizAttempts: (state.quizAttempts ?? []).map((attempt) => withOwner(attempt, attempt.ownerId ?? "")),
+    flashcardDecks: (state.flashcardDecks ?? []).map((deck) => withOwner(deck, deck.ownerId ?? "")),
+    flashcards: (state.flashcards ?? []).map((card) => withOwner(card, card.ownerId ?? "")),
+    flashcardReviews: (state.flashcardReviews ?? []).map((review) => withOwner(review, review.ownerId ?? "")),
+    chatSessions: (state.chatSessions ?? []).map((session) => ({
+      ...session,
+      ownerId: session.ownerId ?? "",
+      sourceIds: session.sourceIds ?? [],
+      messages: (session.messages ?? []).map((message) => ({
+        ...message,
+        ownerId: message.ownerId ?? "",
+        timestamp: new Date(message.timestamp),
+      })),
+    })),
+    studyGoals: (state.studyGoals ?? []).map((goal) => withOwner(goal, goal.ownerId ?? "")),
+  };
+  return removeStalePlaceholderSources(sanitizeOwnedState(normalized, ownerId));
+}
+
 export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
-  const storageKey = `learnbot_learning_${STORAGE_VERSION}_${user?.id ?? "guest"}`;
+  const { user, loading } = useAuth();
+  const ownerId = user?.id ?? "guest";
+  const storageKey = `learnbot_learning_${STORAGE_VERSION}_${ownerId}`;
   const [state, setState] = useState<LearningState>(() => {
-    if (typeof window === "undefined") return buildInitialState();
+    if (typeof window === "undefined") return buildInitialState(ownerId);
     const saved = window.localStorage.getItem(storageKey);
-    if (!saved) return buildInitialState();
+    if (!saved) return buildInitialState(ownerId);
     try {
-      return reviveState(JSON.parse(saved) as LearningState);
+      return reviveState(JSON.parse(saved) as LearningState, ownerId);
     } catch {
-      return buildInitialState();
+      return buildInitialState(ownerId);
     }
   });
 
   useEffect(() => {
+    if (loading) return;
     if (typeof window === "undefined") return;
     const saved = window.localStorage.getItem(storageKey);
     if (!saved) {
-      setState(buildInitialState());
+      setState(buildInitialState(ownerId));
       return;
     }
     try {
-      setState(reviveState(JSON.parse(saved) as LearningState));
+      setState(reviveState(JSON.parse(saved) as LearningState, ownerId));
     } catch {
-      setState(buildInitialState());
+      setState(buildInitialState(ownerId));
     }
-  }, [storageKey]);
+  }, [loading, ownerId, storageKey]);
 
   useEffect(() => {
+    if (loading) return;
     if (typeof window === "undefined") return;
     window.localStorage.setItem(storageKey, JSON.stringify(state));
-  }, [state, storageKey]);
+  }, [loading, state, storageKey]);
+
+  useEffect(() => {
+    if (loading || !user?.id) return;
+    let cancelled = false;
+    const syncOwnedSources = async () => {
+      try {
+        const res = await apiFetch(API_ROUTES.sources, { credentials: "include" });
+        if (!res.ok) return;
+        const payload = await res.json();
+        const remoteSources = normalizeSources(parseSourcesList(payload)).map((source) => withOwner(source, ownerId));
+        if (cancelled) return;
+        const remoteIds = new Set(remoteSources.map((source) => source.id));
+        setState((prev) => {
+          const localOwnedPlaceholders = prev.sources.filter((source) => source.ownerId === ownerId && !isBackendSourceId(source.id));
+          const nextSources = [...remoteSources, ...localOwnedPlaceholders.filter((source) => !remoteIds.has(source.id))];
+          const nextState = sanitizeOwnedState({ ...prev, ownerId, mode: ownerMode(ownerId), sources: nextSources }, ownerId);
+          return removeStalePlaceholderSources(nextState);
+        });
+      } catch (error) {
+        console.warn("Failed to sync user sources", error);
+      }
+    };
+    void syncOwnedSources();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, ownerId, user?.id]);
 
   const value = useMemo<LearningDataValue>(() => {
     const addSource = (input: AddSourceInput) => {
       const concepts = input.type === "url" ? ["Web Research", "Source Evaluation", "Key Claims"] : ["Core Concepts", "Definitions", "Applications"];
       const source: Source = {
         id: newId("source"),
+        ownerId,
         name: input.name,
         type: input.type,
         url: input.url,
@@ -203,43 +298,30 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     const deleteSource = (sourceId: string) => {
-      setState((prev) => ({
-        ...prev,
-        sources: prev.sources.filter((source) => source.id !== sourceId),
-        flashcardDecks: prev.flashcardDecks.filter((deck) => deck.sourceId !== sourceId),
-        flashcards: prev.flashcards.filter((card) => card.sourceId !== sourceId),
-      }));
+      setState((prev) => removeSourceReferences(prev, sourceId));
     };
 
     const createDeckFromSource = (sourceId: string, name?: string) => {
-      const source = state.sources.find((item) => item.id === sourceId);
-      if (!source) return null;
-      const deckId = newId("deck");
-      const concepts = source.keyConcepts?.length ? source.keyConcepts : ["Overview", "Details", "Application"];
-      const cards = concepts.slice(0, 6).map((concept) => ({
-        id: newId("card"),
-        deckId,
-        sourceId,
-        question: `What should you remember about ${concept} from ${source.name}?`,
-        answer: `${concept} is a key idea from ${source.name}. Use the source detail and chat context to refine this placeholder card.`,
-        tags: [concept],
-        masteryScore: 25,
-        nextReviewDate: nowIso(),
-        reviewCount: 0,
-      }));
-      const deck: FlashcardDeck = {
-        id: deckId,
-        name: name?.trim() || `${source.name} Study Deck`,
-        sourceId,
-        createdAt: nowIso(),
-        cardIds: cards.map((card) => card.id),
-      };
-      setState((prev) => ({
-        ...prev,
-        flashcardDecks: [deck, ...prev.flashcardDecks],
-        flashcards: [...cards, ...prev.flashcards],
-      }));
-      return deck;
+      void sourceId;
+      void name;
+      return null;
+    };
+
+    const setGeneratedQuizQuestions = (questions: QuizQuestion[]) => {
+      setState((prev) => ({ ...prev, quizQuestions: questions.map((question) => withOwner(question, ownerId)) }));
+    };
+
+    const addGeneratedDeck = (deck: FlashcardDeck, cards: Flashcard[]) => {
+      setState((prev) => {
+        const cardIds = cards.map((card) => card.id);
+        const nextDeck = { ...deck, ownerId, cardIds };
+        const nextCards = cards.map((card) => withOwner(card, ownerId));
+        return {
+          ...prev,
+          flashcardDecks: [nextDeck, ...prev.flashcardDecks.filter((item) => item.id !== nextDeck.id)],
+          flashcards: [...nextCards, ...prev.flashcards.filter((card) => !cardIds.includes(card.id))],
+        };
+      });
     };
 
     const reviewFlashcard = (flashcardId: string, rating: FlashcardReviewRating) => {
@@ -251,6 +333,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const nextReviewDate = calculateNextReviewDate(rating, reviewCount);
         const review: FlashcardReview = {
           id: newId("review"),
+          ownerId,
           flashcardId,
           rating,
           reviewedAt: nowIso(),
@@ -274,6 +357,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .map((question) => question.topic);
       const attempt: QuizAttempt = {
         id: newId("attempt"),
+        ownerId,
         quizId,
         answers,
         score,
@@ -288,6 +372,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const createChatSession = (sourceIds: string[] = []) => {
       const session: ChatSession = {
         id: newId("chat"),
+        ownerId,
         title: "New study chat",
         sourceIds,
         messages: [],
@@ -299,7 +384,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
     };
 
     const addChatMessage = (sessionId: string, message: Omit<ChatMessage, "id" | "timestamp">) => {
-      const nextMessage: ChatMessage = { ...message, id: newId("message"), timestamp: new Date() };
+      const nextMessage: ChatMessage = { ...message, ownerId, id: newId("message"), timestamp: new Date() };
       setState((prev) => ({
         ...prev,
         chatSessions: prev.chatSessions.map((session) =>
@@ -339,6 +424,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const deckId = newId("deck");
       const deck: FlashcardDeck = {
         id: deckId,
+        ownerId,
         name: `${session?.title ?? "Chat"} Cards`,
         sourceId: message.sourceIds?.[0],
         createdAt: nowIso(),
@@ -347,6 +433,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const sentences = message.content.split(/[.!?]/).map((item) => item.trim()).filter(Boolean).slice(0, 3);
       const cards: Flashcard[] = (sentences.length ? sentences : [message.content]).map((sentence) => ({
         id: newId("card"),
+        ownerId,
         deckId,
         sourceId: message.sourceIds?.[0],
         question: `What is the key idea in: "${sentence.slice(0, 80)}"?`,
@@ -372,6 +459,8 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       updateSource,
       deleteSource,
       createDeckFromSource,
+      setGeneratedQuizQuestions,
+      addGeneratedDeck,
       reviewFlashcard,
       saveQuizAttempt,
       createChatSession,
@@ -379,7 +468,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       saveMessageAsNote,
       createFlashcardsFromMessage,
     };
-  }, [state]);
+  }, [ownerId, state]);
 
   return <LearningDataContext.Provider value={value}>{children}</LearningDataContext.Provider>;
 };

@@ -12,21 +12,22 @@ export const Button: React.FC<
   }
 > = ({ children, variant = "primary", icon: Icon, className = "", ...props }) => {
   const variants: Record<ButtonVariant, string> = {
-    primary: "bg-accent text-white shadow-[0_16px_32px_-18px_color-mix(in_oklab,var(--accent)_70%,transparent)]",
-    secondary: "bg-secondary text-[#10212b]",
-    danger: "bg-rose-500 text-white",
-    outline: "bg-card text-primary border border-default",
-    ghost: "bg-transparent text-primary hover:bg-surface2",
-    soft: "bg-surface2 text-primary border border-white/50",
+    primary:
+      "border border-fuchsia-300 bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 text-white shadow-[0_14px_32px_-18px_rgba(168,85,247,0.85)] hover:shadow-[0_18px_42px_-20px_rgba(168,85,247,0.95)]",
+    secondary: "bg-white/85 text-primary border border-fuchsia-100 hover:border-fuchsia-200 hover:bg-pink-50/70",
+    danger: "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100",
+    outline: "bg-white/80 text-primary border border-fuchsia-100 hover:border-fuchsia-200 hover:bg-violet-50/80",
+    ghost: "bg-transparent text-muted hover:bg-pink-50/80 hover:text-primary",
+    soft: "bg-gradient-to-r from-pink-50 to-violet-50 text-primary border border-fuchsia-100 hover:border-fuchsia-200",
   };
 
   return (
     <button
       className={cx(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl px-5 py-3 text-sm font-bold transition-all duration-200",
-        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25",
+        "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70",
         "disabled:pointer-events-none disabled:opacity-50",
-        "hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_var(--shadow)] active:translate-y-0",
+        "hover:-translate-y-0.5 active:translate-y-px",
         variants[variant],
         className,
       )}
@@ -45,9 +46,9 @@ export const Card: React.FC<{
 }> = ({ children, className = "", interactive = false }) => (
   <div
     className={cx(
-      "rounded-3xl border border-white/60 bg-card shadow-[12px_12px_36px_var(--shadow),-10px_-10px_30px_rgba(255,255,255,0.58)] backdrop-blur-xl",
-      "dark:border-white/10 dark:shadow-[14px_14px_42px_rgba(0,0,0,0.32),-8px_-8px_26px_rgba(255,255,255,0.03)]",
-      interactive && "transition-all hover:-translate-y-1 hover:border-accent/40",
+      "rounded-2xl border border-default bg-card/90 shadow-[0_16px_42px_-34px_var(--shadow)] backdrop-blur-sm",
+      "dark:border-white/10 dark:shadow-none",
+      interactive && "transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:shadow-[0_20px_52px_-34px_rgba(168,85,247,0.35)]",
       className,
     )}
   >
@@ -65,8 +66,8 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     {label && <label className="ml-1 text-sm font-semibold text-primary">{label}</label>}
     <input
       className={cx(
-        "w-full rounded-2xl border border-white/70 bg-white/70 px-4 py-3 text-sm font-semibold text-primary outline-none transition-all placeholder:text-muted",
-        "focus:border-accent focus:bg-white focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--accent)_16%,transparent)] focus-visible:outline-none",
+        "w-full rounded-xl border border-default bg-white/85 px-3.5 py-2.5 text-sm font-medium text-primary outline-none transition placeholder:text-muted",
+        "focus:border-fuchsia-300 focus:bg-white focus:shadow-[0_0_0_4px_rgba(244,114,182,0.14)] focus-visible:outline-none",
         "dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10",
         className,
       )}
@@ -81,15 +82,15 @@ export const Badge: React.FC<{
   color?: "green" | "blue" | "red" | "gray" | "purple" | "orange";
 }> = ({ children, color = "gray" }) => {
   const colors = {
-    green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
-    blue: "bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200",
-    purple: "bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200",
-    orange: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200",
-    red: "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200",
-    gray: "bg-surface2 text-muted",
+    green: "bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-400/15 dark:text-emerald-200",
+    blue: "bg-sky-50 text-sky-700 border border-sky-100 dark:bg-sky-400/15 dark:text-sky-200",
+    purple: "bg-violet-50 text-violet-700 border border-violet-100 dark:bg-violet-400/15 dark:text-violet-200",
+    orange: "bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-400/15 dark:text-amber-200",
+    red: "bg-rose-50 text-rose-700 border border-rose-100 dark:bg-rose-400/15 dark:text-rose-200",
+    gray: "bg-pink-50/70 text-muted border border-fuchsia-100",
   };
   return (
-    <span className={cx("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", colors[color])}>
+    <span className={cx("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium", colors[color])}>
       {children}
     </span>
   );
@@ -106,9 +107,9 @@ export const PageHeader: React.FC<{
     {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
   <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
     <div className="max-w-2xl">
-      {eyebrow && <p className="mb-2 text-sm font-bold text-accent">{eyebrow}</p>}
-      <h1 className="font-heading text-4xl font-bold tracking-tight text-primary md:text-5xl">{title}</h1>
-      {description && <p className="mt-3 text-base font-medium leading-7 text-muted">{description}</p>}
+      {eyebrow && <p className="mb-2 text-sm font-medium text-fuchsia-700">{eyebrow}</p>}
+      <h1 className="bg-gradient-to-r from-primary via-fuchsia-700 to-violet-700 bg-clip-text text-[2.5rem] font-semibold tracking-tight text-transparent md:text-5xl">{title}</h1>
+      {description && <p className="mt-3 text-base font-normal leading-7 text-muted">{description}</p>}
     </div>
     {action && <div className="shrink-0">{action}</div>}
   </div>
@@ -149,11 +150,11 @@ export const StatCard: React.FC<{
     <Card className="p-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-muted">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-primary">{value}</p>
-          {detail && <p className="mt-2 text-sm font-medium text-muted">{detail}</p>}
+          <p className="text-sm font-medium text-muted">{title}</p>
+          <p className="mt-2 text-2xl font-semibold text-primary">{value}</p>
+          {detail && <p className="mt-2 text-sm font-normal text-muted">{detail}</p>}
         </div>
-        <div className={cx("rounded-2xl p-3", accents[accent])}>
+        <div className={cx("rounded-xl p-2.5", accents[accent])}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -170,11 +171,11 @@ export const EmptyState: React.FC<{
 }> = ({ title, description, action, icon: Icon = Sparkles, embedded = false }) => {
   const content = (
     <div className={cx("text-center", embedded ? "p-6" : "")}>
-    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-surface2 text-accent">
-      <Icon className="h-7 w-7" />
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+      <Icon className="h-6 w-6" />
     </div>
-    <h3 className="mt-5 text-xl font-bold text-primary">{title}</h3>
-    {description && <p className="mx-auto mt-2 max-w-md text-sm font-medium leading-6 text-muted">{description}</p>}
+    <h3 className="mt-5 text-xl font-semibold text-primary">{title}</h3>
+    {description && <p className="mx-auto mt-2 max-w-md text-sm font-normal leading-6 text-muted">{description}</p>}
     {action && <div className="mt-6">{action}</div>}
     </div>
   );
@@ -182,7 +183,7 @@ export const EmptyState: React.FC<{
 };
 
 export const LoadingState: React.FC<{ label?: string }> = ({ label = "Loading" }) => (
-  <div className="flex items-center justify-center gap-3 rounded-3xl bg-card p-8 text-sm font-bold text-muted">
+  <div className="flex items-center justify-center gap-3 rounded-2xl border border-default bg-card/90 p-8 text-sm font-medium text-muted shadow-[0_16px_42px_-34px_var(--shadow)] backdrop-blur-sm">
     <Loader2 className="h-5 w-5 animate-spin text-accent" />
     {label}
   </div>
@@ -205,11 +206,11 @@ export const ErrorState: React.FC<{
     </div>
   );
   return embedded ? (
-    <div className="rounded-3xl border border-amber-300/70 bg-amber-50/80 p-5 text-amber-900 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-900 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
       {content}
     </div>
   ) : (
-    <Card className="border-amber-300/70 bg-amber-50/80 p-5 text-amber-900 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
+    <Card className="border-amber-200 bg-amber-50 p-5 text-amber-900 dark:border-amber-300/20 dark:bg-amber-400/10 dark:text-amber-100">
       {content}
     </Card>
   );
@@ -245,7 +246,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2 rounded-3xl bg-card p-2" role="group" aria-label={ariaLabel}>
+    <div className="flex flex-wrap gap-1 rounded-xl border border-default bg-white/85 p-1" role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -253,8 +254,8 @@ export function SegmentedControl<T extends string>({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cx(
-            "rounded-2xl px-4 py-2 text-sm font-bold capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25",
-            value === option.value ? "bg-accent text-white" : "bg-transparent text-primary hover:bg-surface2",
+            "rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
+            value === option.value ? "bg-gradient-to-r from-pink-50 to-violet-50 text-primary shadow-sm" : "bg-transparent text-muted hover:text-primary",
           )}
         >
           {option.label}

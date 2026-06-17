@@ -1,21 +1,44 @@
-import React, { useMemo, useState } from "react";
-import { Brain, CheckCircle2, Circle, RotateCcw, Target, Trophy } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader, SegmentedControl } from "../components/Common";
+import React, { useEffect, useMemo, useState } from "react";
+import { Brain, CheckCircle2, Circle, Loader2, RotateCcw, Sparkles, Target, Trophy } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Badge, Button, Card, EmptyState, ErrorState, LoadingState, PageHeader, SegmentedControl } from "../components/Common";
 import { useLearningData } from "../src/contexts/LearningDataContext";
-import { calculateTopicAccuracy } from "../src/logic/learning";
+import { generateQuizFromSources } from "../src/lib/api";
 import type { QuizDifficulty, QuizQuestion } from "../types";
 
 const difficulties: Array<QuizDifficulty | "all"> = ["all", "easy", "medium", "hard"];
 
 const Quiz: React.FC = () => {
   const data = useLearningData();
+  const [searchParams] = useSearchParams();
+  const readySources = useMemo(
+    () => data.sources.filter((source) => source.status === "ready" && (source.chunkCount ?? 0) > 0),
+    [data.sources],
+  );
   const topics = useMemo(() => ["All", ...Array.from(new Set(data.quizQuestions.map((question) => question.topic)))], [data.quizQuestions]);
+  const initialSourceId = searchParams.get("sourceId");
+  const [selectedSourceIds, setSelectedSourceIds] = useState<string[]>(() =>
+    initialSourceId && readySources.some((source) => source.id === initialSourceId) ? [initialSourceId] : readySources[0]?.id ? [readySources[0].id] : [],
+  );
   const [topic, setTopic] = useState("All");
   const [difficulty, setDifficulty] = useState<QuizDifficulty | "all">("all");
+  const [generationDifficulty, setGenerationDifficulty] = useState<QuizDifficulty | "mixed">("mixed");
+  const [generatedQuizId, setGeneratedQuizId] = useState("source-quiz");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [retryQuestionIds, setRetryQuestionIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (selectedSourceIds.length || !readySources.length) return;
+    if (initialSourceId && readySources.some((source) => source.id === initialSourceId)) {
+      setSelectedSourceIds([initialSourceId]);
+      return;
+    }
+    setSelectedSourceIds([readySources[0].id]);
+  }, [initialSourceId, readySources, selectedSourceIds.length]);
 
   const filteredQuestions = useMemo(() => {
     const filtered = data.quizQuestions.filter((question) => {
@@ -33,10 +56,6 @@ const Quiz: React.FC = () => {
     return retryQuestions.length ? retryQuestions : filteredQuestions;
   }, [filteredQuestions, retryQuestionIds]);
 
-  const topicAccuracy = useMemo(
-    () => calculateTopicAccuracy(data.quizAttempts, data.quizQuestions),
-    [data.quizAttempts, data.quizQuestions],
-  );
   const currentQuestion: QuizQuestion | undefined = questions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
   const isAnswered = selectedAnswer !== undefined;
@@ -52,13 +71,38 @@ const Quiz: React.FC = () => {
     if (clearRetry) setRetryQuestionIds([]);
   };
 
+  const toggleSource = (sourceId: string) => {
+    setSelectedSourceIds((prev) => (prev.includes(sourceId) ? prev.filter((id) => id !== sourceId) : [...prev, sourceId]));
+  };
+
+  const handleGenerateQuiz = async () => {
+    if (!selectedSourceIds.length) return;
+    setIsGenerating(true);
+    setGenerationError(null);
+    try {
+      const generated = await generateQuizFromSources(selectedSourceIds, 8, generationDifficulty);
+      if (!generated.questions.length) {
+        throw new Error("No quiz questions were generated from this source.");
+      }
+      data.setGeneratedQuizQuestions(generated.questions);
+      setGeneratedQuizId(generated.quizId);
+      resetQuiz();
+      setTopic("All");
+      setDifficulty("all");
+    } catch (err) {
+      setGenerationError(err instanceof Error ? err.message : "Quiz generation failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const chooseAnswer = (answerIndex: number) => {
     if (!currentQuestion || submitted) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: answerIndex }));
   };
 
   const finishQuiz = () => {
-    data.saveQuizAttempt("local-practice", answers, questions);
+    data.saveQuizAttempt(generatedQuizId, answers, questions);
     setSubmitted(true);
   };
 
@@ -77,59 +121,91 @@ const Quiz: React.FC = () => {
         eyebrow="Quiz"
         title="Practice with feedback"
         description="Filter by topic or difficulty, answer one question at a time, and review performance before retrying."
+        action={<Button icon={isGenerating ? Loader2 : Sparkles} disabled={!selectedSourceIds.length || isGenerating} onClick={handleGenerateQuiz}>Generate quiz</Button>}
       />
 
-      <Card className="p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <SegmentedControl
-            ariaLabel="Topic filter"
-            value={topic}
-            onChange={(next) => {
-              setTopic(next);
-              resetQuiz();
-            }}
-            options={topics.map((item) => ({ value: item, label: item }))}
-          />
-          <SegmentedControl
-            ariaLabel="Difficulty filter"
-            value={difficulty}
-            onChange={(next) => {
-              setDifficulty(next);
-              resetQuiz();
-            }}
-            options={difficulties.map((item) => ({ value: item, label: item }))}
-          />
+      <Card className="p-4">
+        <div className="flex flex-col gap-5">
+          <div>
+            <p className="mb-3 text-sm font-medium text-muted">Source context</p>
+            <div className="flex flex-wrap gap-2">
+              {readySources.map((source) => (
+                <button
+                  key={source.id}
+                  type="button"
+                  onClick={() => toggleSource(source.id)}
+                  aria-pressed={selectedSourceIds.includes(source.id)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 ${selectedSourceIds.includes(source.id) ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:-translate-y-0.5 hover:border-fuchsia-200 hover:text-primary"}`}
+                >
+                  {source.name}
+                </button>
+              ))}
+              {!readySources.length && <span className="text-sm font-medium text-muted">Upload a readable source before generating a quiz.</span>}
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <SegmentedControl
+              ariaLabel="Generation difficulty"
+              value={generationDifficulty}
+              onChange={(next) => setGenerationDifficulty(next as QuizDifficulty | "mixed")}
+              options={(["mixed", "easy", "medium", "hard"] as Array<QuizDifficulty | "mixed">).map((item) => ({ value: item, label: item }))}
+            />
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+              <SegmentedControl
+                ariaLabel="Topic filter"
+                value={topic}
+                onChange={(next) => {
+                  setTopic(next);
+                  resetQuiz();
+                }}
+                options={topics.map((item) => ({ value: item, label: item }))}
+              />
+              <SegmentedControl
+                ariaLabel="Difficulty filter"
+                value={difficulty}
+                onChange={(next) => {
+                  setDifficulty(next);
+                  resetQuiz();
+                }}
+                options={difficulties.map((item) => ({ value: item, label: item }))}
+              />
+            </div>
+          </div>
         </div>
       </Card>
 
+      {generationError && <ErrorState title="Quiz generation failed" message={generationError} />}
+      {isGenerating && <LoadingState label="Generating quiz from selected source chunks" />}
+
       {!currentQuestion ? (
-        <EmptyState title="No questions yet" description="Upload sources and generate quizzes to expand this bank." />
+        <EmptyState
+          title="Generate a quiz from your uploaded sources."
+          description="Select one or more ready sources, then LearnBot will create questions from the extracted PDF or URL chunks."
+          action={<Button icon={Sparkles} disabled={!selectedSourceIds.length || isGenerating} onClick={handleGenerateQuiz}>Generate Quiz</Button>}
+        />
       ) : submitted ? (
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <Card className="p-8">
+        <div className="mx-auto max-w-4xl">
+          <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,246,252,0.92))] p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-700">
                   <Trophy className="h-8 w-8" />
                 </div>
-                <h2 className="mt-5 text-3xl font-bold text-primary">Score: {score} / {questions.length}</h2>
-                <p className="mt-2 text-sm font-medium text-muted">Accuracy {Math.round((score / questions.length) * 100)}%</p>
+                <h2 className="mt-5 text-3xl font-semibold text-primary">Score: {score} / {questions.length}</h2>
+                <p className="mt-2 text-sm text-muted">Accuracy {Math.round((score / questions.length) * 100)}%</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button icon={RotateCcw} onClick={() => resetQuiz()}>New round</Button>
                 <Button variant="soft" icon={Target} disabled={!incorrectQuestions.length} onClick={retryIncorrect}>Retry incorrect</Button>
               </div>
             </div>
-            <div className="mt-8 rounded-3xl bg-surface2 p-5">
-              <h3 className="font-bold text-primary">Performance summary</h3>
-              <p className="mt-2 text-sm font-medium leading-6 text-muted">
+            <div className="mt-8 rounded-2xl border border-fuchsia-100 bg-white/65 p-5">
+              <h3 className="font-semibold text-primary">Recommended next step</h3>
+              <p className="mt-2 text-sm leading-6 text-muted">
                 {weakTopics.length ? `Review ${weakTopics.join(", ")} next, then retry only the missed questions.` : "No weak topics this round. Move up a difficulty or review flashcards to retain it."}
               </p>
             </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-xl font-bold text-primary">Review answers</h3>
+            <h3 className="mt-8 text-xl font-semibold text-primary">Review answers</h3>
             <div className="mt-5 max-h-[28rem] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
               {questions.map((question, index) => {
                 const answer = answers[question.id];
@@ -142,13 +218,13 @@ const Quiz: React.FC = () => {
                       setSubmitted(false);
                       setCurrentIndex(index);
                     }}
-                    className="w-full rounded-2xl bg-surface2 p-4 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+                    className="w-full rounded-xl border border-default bg-white/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-pink-50/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <p className="line-clamp-1 text-sm font-bold text-primary">{question.prompt}</p>
+                      <p className="line-clamp-1 text-sm font-medium text-primary">{question.prompt}</p>
                       <Badge color={correct ? "green" : "red"}>{correct ? "Correct" : "Missed"}</Badge>
                     </div>
-                    <p className="mt-2 text-xs font-semibold text-muted">Your answer: {answer !== undefined ? question.choices[answer] : "Skipped"}</p>
+                    <p className="mt-2 text-xs text-muted">Your answer: {answer !== undefined ? question.choices[answer] : "Skipped"}</p>
                   </button>
                 );
               })}
@@ -156,19 +232,28 @@ const Quiz: React.FC = () => {
           </Card>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[0.7fr_0.3fr]">
-          <Card className="p-6 md:p-8">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-5">
+            <div className="mb-2 flex items-center justify-between text-sm text-muted">
+              <span>Question {currentIndex + 1} of {questions.length}</span>
+              <span>{answeredCount} answered</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/70">
+              <div className="h-full rounded-full bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
+            </div>
+          </div>
+          <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,248,253,0.92))] p-6 md:p-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Badge color="purple">{currentQuestion.topic}</Badge>
+              <Badge color="gray">{currentQuestion.topic}</Badge>
               <Badge color={currentQuestion.difficulty === "hard" ? "red" : currentQuestion.difficulty === "medium" ? "orange" : "green"}>
                 {currentQuestion.difficulty}
               </Badge>
             </div>
-            <div className="mt-6 flex items-center gap-3 text-sm font-bold text-muted">
-              <Brain className="h-5 w-5 text-accent" />
-              Question {currentIndex + 1} of {questions.length}
+            <div className="mt-6 flex items-center gap-3 text-sm font-medium text-muted">
+              <Brain className="h-5 w-5 text-muted" />
+              Choose the best answer
             </div>
-            <h2 className="mt-5 text-2xl font-bold leading-9 text-primary">{currentQuestion.prompt}</h2>
+            <h2 className="mt-5 text-2xl font-semibold leading-9 text-primary md:text-3xl">{currentQuestion.prompt}</h2>
             <div className="mt-6 space-y-3">
               {currentQuestion.choices.map((choice, index) => {
                 const isCorrect = index === currentQuestion.correctChoiceIndex;
@@ -180,12 +265,14 @@ const Quiz: React.FC = () => {
                     type="button"
                     onClick={() => chooseAnswer(index)}
                     aria-pressed={isSelected}
-                    className={`flex w-full items-center gap-3 rounded-3xl border p-4 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${
+                    className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
                       reveal && isCorrect
-                        ? "border-emerald-300 bg-emerald-100 text-emerald-800"
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                         : reveal && isSelected
-                          ? "border-rose-300 bg-rose-100 text-rose-800"
-                          : "border-white/60 bg-surface2 text-primary hover:-translate-y-0.5"
+                          ? "border-rose-200 bg-rose-50 text-rose-800"
+                          : isSelected
+                            ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary"
+                            : "border-default bg-white/80 text-primary hover:border-fuchsia-200 hover:bg-pink-50/70"
                     }`}
                   >
                     {reveal && isCorrect ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
@@ -195,9 +282,14 @@ const Quiz: React.FC = () => {
               })}
             </div>
             {isAnswered && (
-              <div className="mt-6 rounded-3xl bg-surface2 p-5">
-                <h3 className="font-bold text-primary">Explanation</h3>
-                <p className="mt-2 text-sm font-medium leading-6 text-muted">{currentQuestion.explanation}</p>
+              <div className="mt-6 rounded-2xl border border-fuchsia-100 bg-white/65 p-5">
+                <h3 className="font-semibold text-primary">{selectedAnswer === currentQuestion.correctChoiceIndex ? "Correct" : "Good try"}</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">{currentQuestion.explanation}</p>
+                {currentQuestion.sourceExcerpt && (
+                  <p className="mt-4 rounded-2xl bg-white/60 p-3 text-xs font-semibold leading-5 text-muted">
+                    Source: {currentQuestion.sourceExcerpt}
+                  </p>
+                )}
               </div>
             )}
             <div className="mt-8 flex flex-wrap justify-between gap-3">
@@ -214,48 +306,6 @@ const Quiz: React.FC = () => {
             </div>
           </Card>
 
-          <div className="space-y-6">
-            <Card className="p-6">
-              <h3 className="text-xl font-bold text-primary">Progress</h3>
-              <div className="mt-5 grid grid-cols-5 gap-2">
-                {questions.map((question, index) => (
-                  <button
-                    key={question.id}
-                    type="button"
-                    onClick={() => setCurrentIndex(index)}
-                    aria-label={`Go to question ${index + 1}`}
-                    className={`h-10 rounded-2xl text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${index === currentIndex ? "bg-accent text-white" : answers[question.id] !== undefined ? "bg-green text-[#10212b]" : "bg-surface2 text-muted"}`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-5 text-sm font-medium leading-6 text-muted">
-                {answeredCount} of {questions.length} answered. Finish saves accuracy and weak-topic signals.
-              </p>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-xl font-bold text-primary">Accuracy by topic</h3>
-              <div className="mt-5 space-y-3">
-                {topicAccuracy.length ? (
-                  topicAccuracy.slice(0, 4).map((item) => (
-                    <div key={item.topic}>
-                      <div className="mb-2 flex items-center justify-between text-sm font-bold">
-                        <span className="text-primary">{item.topic}</span>
-                        <span className="text-muted">{item.accuracy}%</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-surface2">
-                        <div className="h-full rounded-full bg-accent" style={{ width: `${item.accuracy}%` }} />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm font-medium leading-6 text-muted">Complete a quiz to populate topic accuracy.</p>
-                )}
-              </div>
-            </Card>
-          </div>
         </div>
       )}
     </div>

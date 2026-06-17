@@ -4,7 +4,7 @@ import logging
 import tempfile
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,6 +23,8 @@ from .schemas import (
     DeckOut,
     FlashcardGenerateRequest,
     FlashcardOut,
+    QuizGenerateRequest,
+    QuizGenerateResponse,
     SourceOut,
     SourcesListResponse,
     URLIngestRequest,
@@ -81,7 +83,16 @@ def _user_dir(user_id: str) -> Path:
     return user_dir
 
 
+def _require_valid_source_id(source_id: str) -> str:
+    try:
+        UUID(source_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid source id") from exc
+    return source_id
+
+
 def _source_debug_payload(user_id: str, source_id: str) -> dict[str, Any]:
+    source_id = _require_valid_source_id(source_id)
     source = source_store.get_source(user_id=user_id, source_id=source_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -100,6 +111,48 @@ def _source_debug_payload(user_id: str, source_id: str) -> dict[str, Any]:
         "chunk_count": chunk_count,
         "source_chunk_count": len(supabase_chunks),
     }
+
+
+def _collect_source_text(user_id: str, source_ids: list[str], *, max_chars: int = 24000) -> tuple[str, list[dict[str, Any]]]:
+    source_text_parts: list[str] = []
+    sources: list[dict[str, Any]] = []
+    total_chars = 0
+
+    for source_id in source_ids:
+        source_id = _require_valid_source_id(source_id)
+        source = source_store.get_source(user_id=user_id, source_id=source_id)
+        if source is None:
+            raise HTTPException(status_code=404, detail=f"Source not found: {source_id}")
+        sources.append(source)
+
+        chunks = source_store.list_source_chunks(source_id=source_id, user_id=user_id, limit=24)
+        if not chunks:
+            chunks = db.list_chunks_by_source(user_id=user_id, source_id=source_id, limit=24)
+
+        chunk_count = len(chunks)
+        logger.info("Collect source text user_id=%s source_id=%s chunk_count=%s", user_id, source_id, chunk_count)
+        if chunk_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="This source has not been processed yet or contains no readable text.",
+            )
+
+        for chunk in chunks:
+            content = str(chunk.get("content") or "").strip()
+            if not content:
+                continue
+            remaining = max_chars - total_chars
+            if remaining <= 0:
+                break
+            source_text_parts.append(f"Source: {source.get('name')}\n{content[:remaining]}")
+            total_chars += min(len(content), remaining)
+        if total_chars >= max_chars:
+            break
+
+    source_text = "\n\n".join(source_text_parts).strip()
+    if not source_text:
+        raise HTTPException(status_code=400, detail="Selected sources have no usable extracted text.")
+    return source_text, sources
 
 
 @app.get("/health")
@@ -305,6 +358,7 @@ def list_sources(user_id: str = Depends(get_current_user_id)) -> dict[str, list[
 
 @app.get("/api/sources/{source_id}")
 def get_source(source_id: str, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    source_id = _require_valid_source_id(source_id)
     source = source_store.get_source(user_id=user_id, source_id=source_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -314,6 +368,7 @@ def get_source(source_id: str, user_id: str = Depends(get_current_user_id)) -> d
 
 @app.get("/api/sources/{source_id}/debug")
 def get_source_debug(source_id: str, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    source_id = _require_valid_source_id(source_id)
     payload = _source_debug_payload(user_id=user_id, source_id=source_id)
     logger.info(
         "Source debug user_id=%s source_id=%s status=%s chunk_count=%s extracted_text_length=%s",
@@ -328,6 +383,7 @@ def get_source_debug(source_id: str, user_id: str = Depends(get_current_user_id)
 
 @app.delete("/api/sources/{source_id}")
 def delete_source(source_id: str, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    source_id = _require_valid_source_id(source_id)
     source = source_store.get_source(user_id=user_id, source_id=source_id)
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -357,47 +413,8 @@ def generate_deck(payload: DeckGenerateRequest, user_id: str = Depends(get_curre
     if difficulty not in {"easy", "mixed", "hard"}:
         raise HTTPException(status_code=400, detail="difficulty must be easy, mixed, or hard")
 
-    source = source_store.get_source(user_id=user_id, source_id=payload.source_id)
-    if source is None:
-        raise HTTPException(status_code=404, detail="Source not found")
-
-    supabase_chunks = source_store.list_source_chunks(
-        source_id=payload.source_id,
-        user_id=user_id,
-        limit=20,
-    )
-
-    source_text_parts: list[str] = []
-    total_chars = 0
-    if supabase_chunks:
-        for chunk in supabase_chunks:
-            content = str(chunk.get("content") or "").strip()
-            if not content:
-                continue
-            remaining = 15000 - total_chars
-            if remaining <= 0:
-                break
-            source_text_parts.append(content[:remaining])
-            total_chars += min(len(content), remaining)
-
-    if not source_text_parts:
-        chunks = db.list_chunks_by_source(user_id=user_id, source_id=payload.source_id, limit=20)
-        for chunk in chunks:
-            content = str(chunk.get("content") or "").strip()
-            if not content:
-                continue
-            remaining = 15000 - total_chars
-            if remaining <= 0:
-                break
-            source_text_parts.append(content[:remaining])
-            total_chars += min(len(content), remaining)
-
-    if not source_text_parts:
-        raise HTTPException(status_code=400, detail="No extracted content found for source")
-
-    source_text = "\n\n".join(source_text_parts).strip()
-    if not source_text:
-        raise HTTPException(status_code=400, detail="Source has no usable text")
+    source_text, sources = _collect_source_text(user_id, [payload.source_id], max_chars=24000)
+    source = sources[0]
 
     cards = gemini.generate_flashcards(
         source_name=source["name"],
@@ -413,7 +430,36 @@ def generate_deck(payload: DeckGenerateRequest, user_id: str = Depends(get_curre
         name=deck_name,
     )
     inserted_cards = source_store.insert_flashcards(deck["id"], cards)
-    return {"deck_id": deck["id"], "count": len(inserted_cards)}
+    response_cards = []
+    for index, inserted in enumerate(inserted_cards):
+        generated = cards[index] if index < len(cards) else {}
+        response_cards.append(
+            {
+                "id": inserted["id"],
+                "deck_id": deck["id"],
+                "source_id": payload.source_id,
+                "question": inserted.get("question") or generated.get("question", ""),
+                "answer": inserted.get("answer") or generated.get("answer", ""),
+                "tags": [
+                    str(tag)
+                    for tag in (generated.get("tags") or inserted.get("tags") or [])
+                    if str(tag).strip() and not str(tag).startswith(("topic:", "difficulty:", "excerpt:"))
+                ],
+                "topic": generated.get("topic"),
+                "difficulty": generated.get("difficulty"),
+                "source_excerpt": generated.get("source_excerpt"),
+            }
+        )
+
+    deck_payload = {
+        "id": deck["id"],
+        "name": deck["name"],
+        "source_id": payload.source_id,
+        "source_title": source.get("name"),
+        "card_count": len(response_cards),
+        "created_at": deck["created_at"],
+    }
+    return {"deck_id": deck["id"], "count": len(response_cards), "deck": deck_payload, "cards": response_cards}
 
 
 @app.get("/api/decks", response_model=DecksListResponse)
@@ -435,7 +481,7 @@ def get_deck_cards(
     if deck is None:
         raise HTTPException(status_code=404, detail="Deck not found")
 
-    total, cards = source_store.get_deck_cards(deck_id=deck_id, page=page, page_size=page_size)
+    total, cards = source_store.get_deck_cards(user_id=user_id, deck_id=deck_id, page=page, page_size=page_size)
     deck_payload = {
         "id": deck["id"],
         "name": deck["name"],
@@ -451,6 +497,48 @@ def get_deck_cards(
         "total": total,
         "cards": cards,
     }
+
+
+@app.post("/api/quizzes/generate", response_model=QuizGenerateResponse)
+def generate_quiz(payload: QuizGenerateRequest, user_id: str = Depends(get_current_user_id)) -> dict[str, Any]:
+    difficulty = payload.difficulty.lower()
+    if difficulty not in {"easy", "medium", "hard", "mixed"}:
+        raise HTTPException(status_code=400, detail="difficulty must be easy, medium, hard, or mixed")
+
+    unique_source_ids = list(dict.fromkeys(payload.source_ids))
+    source_text, sources = _collect_source_text(user_id, unique_source_ids, max_chars=26000)
+    source_name = ", ".join(str(source.get("name") or "Source") for source in sources)
+    logger.info(
+        "Quiz generation started user_id=%s source_ids=%s question_count=%s difficulty=%s text_len=%s",
+        user_id,
+        unique_source_ids,
+        payload.question_count,
+        difficulty,
+        len(source_text),
+    )
+    questions = gemini.generate_quiz(
+        source_name=source_name,
+        source_text=source_text,
+        question_count=payload.question_count,
+        difficulty=difficulty,
+    )
+    quiz_id = str(uuid4())
+    response_questions = [
+        {
+            "id": str(uuid4()),
+            "question": question["question"],
+            "choices": question["choices"],
+            "correct_answer": question["correct_answer"],
+            "explanation": question["explanation"],
+            "topic": question["topic"],
+            "difficulty": question["difficulty"],
+            "source_excerpt": question["source_excerpt"],
+            "source_id": unique_source_ids[0] if len(unique_source_ids) == 1 else None,
+        }
+        for question in questions
+    ]
+    logger.info("Quiz generation complete user_id=%s quiz_id=%s question_count=%s", user_id, quiz_id, len(response_questions))
+    return {"quiz_id": quiz_id, "source_ids": unique_source_ids, "questions": response_questions}
 
 
 @app.post("/api/chat", response_model=ChatResponse)

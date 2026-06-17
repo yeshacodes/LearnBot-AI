@@ -59,6 +59,21 @@ class GeminiService:
             "answer": str(data.get("answer", answer)).strip(),
         }
 
+    def _parse_json_array(self, text: str) -> list[Any]:
+        start = text.find("[")
+        end = text.rfind("]")
+        if start >= 0 and end > start:
+            text = text[start : end + 1]
+        data = json.loads(text)
+        if not isinstance(data, list):
+            raise ValueError("Model did not return a JSON array")
+        return data
+
+    def _string_list(self, value: Any) -> list[str]:
+        if not isinstance(value, list):
+            return []
+        return [str(item).strip() for item in value if str(item).strip()]
+
     def generate_flashcards(
         self,
         *,
@@ -69,10 +84,13 @@ class GeminiService:
         max_retries: int = 2,
     ) -> list[dict[str, Any]]:
         prompt = (
-            "Generate study flashcards from the provided source text. "
+            "You are generating flashcards for LearnBot from uploaded source chunks. "
+            "Use only facts stated in the source text. Do not create generic study advice, placeholders, or filename-based cards. "
             f"Return exactly {num_cards} items as a strict JSON array. "
-            "Each item must be an object with keys question, answer, tags. "
-            "tags must be an array of short strings. "
+            "Each item must be an object with keys question, answer, topic, difficulty, source_excerpt, tags. "
+            "question should be the front of the card and answer should be the back. "
+            "source_excerpt must be a short exact-or-close phrase from the provided source text that supports the card. "
+            "tags must be an array of short topic strings. "
             f"Difficulty should be {difficulty}. "
             "No markdown. No prose. JSON only.\n\n"
             f"Source title: {source_name}\n\n"
@@ -87,32 +105,33 @@ class GeminiService:
                     contents=prompt,
                 ).text or ""
 
-                start = text.find("[")
-                end = text.rfind("]")
-                if start >= 0 and end > start:
-                    text = text[start : end + 1]
-
-                data = json.loads(text)
-                if not isinstance(data, list):
-                    raise ValueError("Model did not return a JSON array")
+                data = self._parse_json_array(text)
 
                 normalized: list[dict[str, Any]] = []
                 for item in data:
                     if not isinstance(item, dict):
                         continue
-                    question = str(item.get("question", "")).strip()
-                    answer = str(item.get("answer", "")).strip()
-                    tags = item.get("tags", [])
-                    if not isinstance(tags, list):
-                        tags = []
-                    tags = [str(tag).strip() for tag in tags if str(tag).strip()]
+                    question = str(item.get("question") or item.get("front") or "").strip()
+                    answer = str(item.get("answer") or item.get("back") or "").strip()
+                    topic = str(item.get("topic") or "").strip()[:80] or "Source concept"
+                    card_difficulty = str(item.get("difficulty") or difficulty).strip().lower()
+                    source_excerpt = str(item.get("source_excerpt") or "").strip()[:500]
+                    tags = self._string_list(item.get("tags"))
                     if not question or not answer:
                         continue
+                    metadata_tags = [
+                        f"topic:{topic}",
+                        f"difficulty:{card_difficulty}",
+                        f"excerpt:{source_excerpt}",
+                    ]
                     normalized.append(
                         {
                             "question": question,
                             "answer": answer,
-                            "tags": tags or ["General"],
+                            "topic": topic,
+                            "difficulty": card_difficulty,
+                            "source_excerpt": source_excerpt,
+                            "tags": [*(tags or [topic]), *metadata_tags],
                         }
                     )
 
@@ -124,3 +143,70 @@ class GeminiService:
                 last_error = exc
 
         raise RuntimeError(f"Failed to generate flashcards: {last_error}")
+
+    def generate_quiz(
+        self,
+        *,
+        source_name: str,
+        source_text: str,
+        question_count: int = 8,
+        difficulty: str = "mixed",
+        max_retries: int = 2,
+    ) -> list[dict[str, Any]]:
+        prompt = (
+            "You are generating a LearnBot quiz from uploaded source chunks. "
+            "Use only the provided source text. Do not create generic learning-platform questions. "
+            f"Return exactly {question_count} multiple-choice questions as a strict JSON array. "
+            "Each item must have keys question, choices, correct_answer, explanation, topic, difficulty, source_excerpt. "
+            "choices must contain exactly four distinct strings. correct_answer must exactly match one choice. "
+            "source_excerpt must be a short supporting phrase from the source text. "
+            f"Overall difficulty: {difficulty}. "
+            "No markdown. No prose. JSON only.\n\n"
+            f"Source title: {source_name}\n\n"
+            f"Source text:\n{source_text[:26000]}"
+        )
+
+        last_error: Exception | None = None
+        for _ in range(max_retries + 1):
+            try:
+                text = self._require_client().models.generate_content(
+                    model=settings.gemini_chat_model,
+                    contents=prompt,
+                ).text or ""
+                data = self._parse_json_array(text)
+                normalized: list[dict[str, Any]] = []
+                for item in data:
+                    if not isinstance(item, dict):
+                        continue
+                    question = str(item.get("question") or "").strip()
+                    choices = self._string_list(item.get("choices"))
+                    correct_answer = str(item.get("correct_answer") or "").strip()
+                    explanation = str(item.get("explanation") or "").strip()
+                    topic = str(item.get("topic") or "").strip()[:80] or "Source concept"
+                    item_difficulty = str(item.get("difficulty") or difficulty).strip().lower()
+                    source_excerpt = str(item.get("source_excerpt") or "").strip()[:500]
+
+                    distinct_choices = list(dict.fromkeys(choices))
+                    if len(distinct_choices) != 4 or correct_answer not in distinct_choices:
+                        continue
+                    if not question or not explanation:
+                        continue
+                    normalized.append(
+                        {
+                            "question": question,
+                            "choices": distinct_choices,
+                            "correct_answer": correct_answer,
+                            "explanation": explanation,
+                            "topic": topic,
+                            "difficulty": item_difficulty,
+                            "source_excerpt": source_excerpt,
+                        }
+                    )
+
+                if not normalized:
+                    raise ValueError("No valid quiz questions returned")
+                return normalized[:question_count]
+            except Exception as exc:
+                last_error = exc
+
+        raise RuntimeError(f"Failed to generate quiz: {last_error}")

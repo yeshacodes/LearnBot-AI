@@ -256,6 +256,8 @@ class SupabaseStore:
             source_response = (
                 self.client.table("sources")
                 .select("id,name")
+                .eq("user_id", user_id)
+                .is_("deleted_at", "null")
                 .in_("id", source_ids)
                 .execute()
             )
@@ -308,7 +310,11 @@ class SupabaseStore:
             "created_at": deck["created_at"],
         }
 
-    def get_deck_cards(self, deck_id: str, page: int, page_size: int) -> tuple[int, list[dict[str, Any]]]:
+    def get_deck_cards(self, user_id: str, deck_id: str, page: int, page_size: int) -> tuple[int, list[dict[str, Any]]]:
+        deck = self.get_deck(user_id=user_id, deck_id=deck_id)
+        if deck is None:
+            return 0, []
+
         all_response = (
             self.client.table("flashcards")
             .select("id,deck_id,question,answer,tags,created_at")
@@ -329,12 +335,31 @@ class SupabaseStore:
                     tags = json.loads(tags)
                 except Exception:
                     tags = [tags]
+            visible_tags: list[str] = []
+            topic: str | None = None
+            difficulty: str | None = None
+            source_excerpt: str | None = None
+            if isinstance(tags, list):
+                for tag in tags:
+                    text = str(tag).strip()
+                    if text.startswith("topic:"):
+                        topic = text.removeprefix("topic:").strip() or topic
+                    elif text.startswith("difficulty:"):
+                        difficulty = text.removeprefix("difficulty:").strip() or difficulty
+                    elif text.startswith("excerpt:"):
+                        source_excerpt = text.removeprefix("excerpt:").strip() or source_excerpt
+                    elif text:
+                        visible_tags.append(text)
             normalized.append(
                 {
                     "id": row["id"],
+                    "deck_id": row.get("deck_id"),
                     "question": row["question"],
                     "answer": row["answer"],
-                    "tags": tags if isinstance(tags, list) else [],
+                    "tags": visible_tags,
+                    "topic": topic,
+                    "difficulty": difficulty,
+                    "source_excerpt": source_excerpt,
                     "created_at": row["created_at"],
                 }
             )

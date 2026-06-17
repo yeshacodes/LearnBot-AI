@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import type { Source } from "../../types";
+import type { Flashcard, FlashcardDeck, QuizDifficulty, QuizQuestion, Source } from "../../types";
 
 export type SourceDebug = {
   source_id: string;
@@ -21,9 +21,16 @@ export const API_ROUTES = {
   decks: "/api/decks",
   deckCards: (deckId: string) => `/api/decks/${deckId}/cards`,
   deckGenerate: "/api/decks/generate",
+  quizGenerate: "/api/quizzes/generate",
   flashcards: "/api/flashcards",
   flashcardGenerate: "/api/flashcards/generate",
 } as const;
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isBackendSourceId(id: string): boolean {
+  return !id.startsWith("source-") && UUID_PATTERN.test(id);
+}
 
 export async function getAccessToken(): Promise<string | null> {
   const session = await supabase.auth.getSession();
@@ -77,6 +84,10 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 }
 
 export async function deleteSource(sourceId: string): Promise<{ deleted: boolean; source_id: string }> {
+  if (!isBackendSourceId(sourceId)) {
+    return { deleted: true, source_id: sourceId };
+  }
+
   const res = await apiFetch(API_ROUTES.source(sourceId), {
     method: "DELETE",
     credentials: "include",
@@ -167,5 +178,118 @@ export function sourceFromDebug(debug: SourceDebug, fallback?: Partial<Source>):
     chunkCount: debug.chunk_count,
     extractedTextLength: debug.extracted_text_length,
     processingError: debug.error,
+  };
+}
+
+async function parseApiError(res: Response, fallback: string): Promise<string> {
+  const text = await res.text();
+  try {
+    const parsed = JSON.parse(text);
+    return typeof parsed?.detail === "string" ? parsed.detail : fallback;
+  } catch {
+    return text || fallback;
+  }
+}
+
+function normalizeDifficulty(value: unknown): QuizDifficulty {
+  const text = String(value ?? "").toLowerCase();
+  if (text === "easy" || text === "medium" || text === "hard") return text;
+  return "medium";
+}
+
+export type GeneratedQuiz = {
+  quizId: string;
+  sourceIds: string[];
+  questions: QuizQuestion[];
+};
+
+export async function generateQuizFromSources(
+  sourceIds: string[],
+  questionCount = 8,
+  difficulty: QuizDifficulty | "mixed" = "mixed",
+): Promise<GeneratedQuiz> {
+  const res = await apiFetch(API_ROUTES.quizGenerate, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source_ids: sourceIds, question_count: questionCount, difficulty }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res, "Quiz generation failed."));
+  }
+
+  const payload = await res.json();
+  const questions: QuizQuestion[] = (Array.isArray(payload.questions) ? payload.questions : []).map((question: any) => {
+    const choices = Array.isArray(question.choices) ? question.choices.map(String) : [];
+    const correctAnswer = String(question.correct_answer ?? "");
+    return {
+      id: String(question.id ?? crypto.randomUUID()),
+      topic: String(question.topic ?? "Source concept"),
+      difficulty: normalizeDifficulty(question.difficulty),
+      prompt: String(question.question ?? ""),
+      choices,
+      correctChoiceIndex: Math.max(0, choices.indexOf(correctAnswer)),
+      explanation: String(question.explanation ?? ""),
+      sourceId: question.source_id ? String(question.source_id) : sourceIds[0],
+      sourceExcerpt: question.source_excerpt ? String(question.source_excerpt) : undefined,
+    };
+  }).filter((question) => question.prompt && question.choices.length === 4);
+
+  return {
+    quizId: String(payload.quiz_id ?? crypto.randomUUID()),
+    sourceIds: Array.isArray(payload.source_ids) ? payload.source_ids.map(String) : sourceIds,
+    questions,
+  };
+}
+
+export type GeneratedDeck = {
+  deck: FlashcardDeck;
+  cards: Flashcard[];
+};
+
+export async function generateDeckFromSources(
+  sourceId: string,
+  numCards = 12,
+  difficulty: "easy" | "mixed" | "hard" = "mixed",
+  deckName?: string,
+): Promise<GeneratedDeck> {
+  const res = await apiFetch(API_ROUTES.deckGenerate, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source_id: sourceId, num_cards: numCards, difficulty, deck_name: deckName }),
+  });
+
+  if (!res.ok) {
+    throw new Error(await parseApiError(res, "Flashcard deck generation failed."));
+  }
+
+  const payload = await res.json();
+  const deckId = String(payload.deck_id ?? payload.deck?.id ?? crypto.randomUUID());
+  const cards: Flashcard[] = (Array.isArray(payload.cards) ? payload.cards : []).map((card: any) => ({
+    id: String(card.id ?? crypto.randomUUID()),
+    deckId,
+    sourceId,
+    question: String(card.question ?? ""),
+    answer: String(card.answer ?? ""),
+    tags: Array.isArray(card.tags) ? card.tags.map(String).filter(Boolean) : [],
+    topic: card.topic ? String(card.topic) : undefined,
+    difficulty: card.difficulty ? String(card.difficulty) : undefined,
+    sourceExcerpt: card.source_excerpt ? String(card.source_excerpt) : undefined,
+    masteryScore: 0,
+    nextReviewDate: new Date().toISOString(),
+    reviewCount: 0,
+  })).filter((card) => card.question && card.answer);
+
+  return {
+    deck: {
+      id: deckId,
+      name: String(payload.deck?.name ?? deckName ?? "Generated deck"),
+      sourceId,
+      createdAt: String(payload.deck?.created_at ?? new Date().toISOString()),
+      cardIds: cards.map((card) => card.id),
+    },
+    cards,
   };
 }

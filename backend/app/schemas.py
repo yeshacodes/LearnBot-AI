@@ -48,11 +48,6 @@ class DeckGenerateRequest(BaseModel):
     difficulty: str = Field(default="mixed")
 
 
-class DeckGenerateResponse(BaseModel):
-    deck_id: str
-    count: int
-
-
 class DeckOut(BaseModel):
     id: str
     name: str
@@ -71,6 +66,18 @@ class DeckCardOut(BaseModel):
     question: str
     answer: str
     tags: list[str]
+    topic: str | None = None
+    difficulty: str | None = None
+    source_excerpt: str | None = None
+    source_id: str | None = None
+    deck_id: str | None = None
+
+
+class DeckGenerateResponse(BaseModel):
+    deck_id: str
+    count: int
+    deck: DeckOut | None = None
+    cards: list[DeckCardOut] = Field(default_factory=list)
 
 
 class DeckCardsResponse(BaseModel):
@@ -79,6 +86,30 @@ class DeckCardsResponse(BaseModel):
     page_size: int
     total: int
     cards: list[DeckCardOut]
+
+
+class QuizGenerateRequest(BaseModel):
+    source_ids: list[str] = Field(min_length=1)
+    question_count: int = Field(default=8, ge=1, le=20)
+    difficulty: str = Field(default="mixed")
+
+
+class QuizQuestionOut(BaseModel):
+    id: str
+    question: str
+    choices: list[str]
+    correct_answer: str
+    explanation: str
+    topic: str
+    difficulty: str
+    source_excerpt: str
+    source_id: str | None = None
+
+
+class QuizGenerateResponse(BaseModel):
+    quiz_id: str
+    source_ids: list[str]
+    questions: list[QuizQuestionOut]
 
 
 class SourceOut(BaseModel):

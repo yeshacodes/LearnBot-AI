@@ -1,154 +1,363 @@
-import React, { useMemo, useState } from "react";
-import { Brain, CheckCircle2, Flame, Layers, RotateCw, Sparkles } from "lucide-react";
-import { Badge, Button, Card, EmptyState, PageHeader, StatCard } from "../components/Common";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, Loader2, RotateCw, Sparkles, Undo2 } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Button, Card, EmptyState, ErrorState, LoadingState, PageHeader } from "../components/Common";
 import { useLearningData } from "../src/contexts/LearningDataContext";
-import { calculateReviewStreak, getDueFlashcards } from "../src/logic/learning";
+import { getDueFlashcards } from "../src/logic/learning";
+import { generateDeckFromSources } from "../src/lib/api";
 import type { FlashcardReviewRating } from "../types";
 
-const ratingConfig: Array<{ key: FlashcardReviewRating; label: string; variant: "danger" | "soft" | "secondary" | "primary" }> = [
-  { key: "again", label: "Again", variant: "danger" },
-  { key: "hard", label: "Hard", variant: "soft" },
-  { key: "good", label: "Good", variant: "secondary" },
-  { key: "easy", label: "Easy", variant: "primary" },
-];
+type DragState = {
+  active: boolean;
+  startX: number;
+  offsetX: number;
+  didDrag: boolean;
+};
+
+const SWIPE_THRESHOLD = 120;
 
 const FlashcardsPage: React.FC = () => {
   const data = useLearningData();
+  const [searchParams] = useSearchParams();
+  const readySources = useMemo(
+    () => data.sources.filter((source) => source.status === "ready" && (source.chunkCount ?? 0) > 0),
+    [data.sources],
+  );
+  const initialSourceId = searchParams.get("sourceId");
   const [selectedDeckId, setSelectedDeckId] = useState<string>(() => data.flashcardDecks[0]?.id ?? "");
-  const [flippedCardIds, setFlippedCardIds] = useState<Record<string, boolean>>({});
+  const [selectedSourceId, setSelectedSourceId] = useState<string>(() =>
+    initialSourceId && readySources.some((source) => source.id === initialSourceId) ? initialSourceId : readySources[0]?.id ?? "",
+  );
+  const [sessionCardIds, setSessionCardIds] = useState<string[]>([]);
+  const [reviewedCardIds, setReviewedCardIds] = useState<string[]>([]);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [drag, setDrag] = useState<DragState>({ active: false, startX: 0, offsetX: 0, didDrag: false });
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationError, setGenerationError] = useState<string | null>(null);
   const [sessionReviews, setSessionReviews] = useState<Record<FlashcardReviewRating, number>>({
     again: 0,
     hard: 0,
     good: 0,
     easy: 0,
   });
+  const didDragRef = useRef(false);
 
   const selectedDeck = data.flashcardDecks.find((deck) => deck.id === selectedDeckId) ?? data.flashcardDecks[0];
   const deckCards = useMemo(
     () => (selectedDeck ? data.flashcards.filter((card) => selectedDeck.cardIds.includes(card.id)) : []),
     [data.flashcards, selectedDeck],
   );
-  const dueCards = useMemo(() => getDueFlashcards(data.flashcards), [data.flashcards]);
-  const averageMastery = data.flashcards.length
-    ? Math.round(data.flashcards.reduce((sum, card) => sum + (card.masteryScore ?? 0), 0) / data.flashcards.length)
-    : 0;
+  const deckCardSignature = useMemo(() => deckCards.map((card) => card.id).join("|"), [deckCards]);
   const deckCompletion = deckCards.length
     ? Math.round((deckCards.filter((card) => (card.masteryScore ?? 0) >= 70).length / deckCards.length) * 100)
     : 0;
-  const reviewStreak = useMemo(
-    () => calculateReviewStreak(data.flashcardReviews.map((review) => review.reviewedAt)),
-    [data.flashcardReviews],
-  );
   const sessionTotal = Object.values(sessionReviews).reduce((sum, count) => sum + count, 0);
+  const needsPractice = sessionReviews.again;
+  const movedForward = sessionReviews.good + sessionReviews.easy;
+  const currentCardId = sessionCardIds.find((id) => !reviewedCardIds.includes(id));
+  const currentCard = deckCards.find((card) => card.id === currentCardId);
+  const currentPosition = currentCardId ? reviewedCardIds.length + 1 : Math.min(reviewedCardIds.length, sessionCardIds.length);
+  const hasCompletedSession = sessionCardIds.length > 0 && !currentCard;
+  const swipeIntent = drag.offsetX > 24 ? "right" : drag.offsetX < -24 ? "left" : null;
+  const rotate = Math.max(-10, Math.min(10, drag.offsetX / 18));
 
-  const review = (cardId: string, rating: FlashcardReviewRating) => {
-    data.reviewFlashcard(cardId, rating);
+  useEffect(() => {
+    if (selectedSourceId || !readySources.length) return;
+    if (initialSourceId && readySources.some((source) => source.id === initialSourceId)) {
+      setSelectedSourceId(initialSourceId);
+      return;
+    }
+    setSelectedSourceId(readySources[0].id);
+  }, [initialSourceId, readySources, selectedSourceId]);
+
+  useEffect(() => {
+    if (!selectedDeck && data.flashcardDecks[0]) {
+      setSelectedDeckId(data.flashcardDecks[0].id);
+    }
+  }, [data.flashcardDecks, selectedDeck]);
+
+  useEffect(() => {
+    if (!selectedDeck) {
+      setSessionCardIds([]);
+      setReviewedCardIds([]);
+      setIsFlipped(false);
+      return;
+    }
+    const dueIds = getDueFlashcards(deckCards).map((card) => card.id);
+    const nextIds = dueIds.length ? dueIds : [];
+    setSessionCardIds(nextIds);
+    setReviewedCardIds([]);
+    setIsFlipped(false);
+    setDrag({ active: false, startX: 0, offsetX: 0, didDrag: false });
+  }, [selectedDeck?.id, deckCardSignature]);
+
+  const submitReview = (rating: FlashcardReviewRating) => {
+    if (!currentCard) return;
+    data.reviewFlashcard(currentCard.id, rating);
     setSessionReviews((prev) => ({ ...prev, [rating]: prev[rating] + 1 }));
-    setFlippedCardIds((prev) => ({ ...prev, [cardId]: false }));
+    setReviewedCardIds((prev) => [...prev, currentCard.id]);
+    setIsFlipped(false);
+    setDrag({ active: false, startX: 0, offsetX: 0, didDrag: false });
   };
 
+  const handleGenerateDeck = async () => {
+    if (!selectedSourceId) return;
+    const source = readySources.find((item) => item.id === selectedSourceId);
+    setIsGenerating(true);
+    setGenerationError(null);
+    try {
+      const generated = await generateDeckFromSources(selectedSourceId, 12, "mixed", source ? `${source.name} Deck` : undefined);
+      if (!generated.cards.length) {
+        throw new Error("No flashcards were generated from this source.");
+      }
+      data.addGeneratedDeck(generated.deck, generated.cards);
+      setSelectedDeckId(generated.deck.id);
+      setSessionReviews({ again: 0, hard: 0, good: 0, easy: 0 });
+    } catch (err) {
+      setGenerationError(err instanceof Error ? err.message : "Flashcard generation failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isFlipped || !currentCard) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    didDragRef.current = false;
+    setDrag({ active: true, startX: event.clientX, offsetX: 0, didDrag: false });
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (!drag.active) return;
+    const offsetX = event.clientX - drag.startX;
+    if (Math.abs(offsetX) > 8) didDragRef.current = true;
+    setDrag((prev) => ({ ...prev, offsetX, didDrag: prev.didDrag || Math.abs(offsetX) > 8 }));
+  };
+
+  const finishDrag = () => {
+    if (!drag.active) return;
+    const offsetX = drag.offsetX;
+    setDrag({ active: false, startX: 0, offsetX: 0, didDrag: drag.didDrag });
+    if (offsetX > SWIPE_THRESHOLD) {
+      submitReview("good");
+      return;
+    }
+    if (offsetX < -SWIPE_THRESHOLD) {
+      submitReview("again");
+    }
+  };
+
+  const handleCardClick = () => {
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      setDrag((prev) => ({ ...prev, didDrag: false }));
+      return;
+    }
+    if (currentCard) setIsFlipped((flipped) => !flipped);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!currentCard) return;
+      if (event.code === "Space") {
+        event.preventDefault();
+        setIsFlipped((flipped) => !flipped);
+      }
+      if (!isFlipped) return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        submitReview("good");
+      }
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        submitReview("again");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentCard?.id, isFlipped]);
+
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-6 pb-12">
       <PageHeader
         breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Flashcards" }]}
         eyebrow="Flashcards"
-        title="Spaced repetition"
-        description="Review by deck, flip each card, and schedule the next review with a confidence rating."
-        action={<Button icon={Sparkles} disabled={!data.sources[0]} onClick={() => data.sources[0] && data.createDeckFromSource(data.sources[0].id)}>Generate from latest source</Button>}
+        title="Review cards"
+        description="Flip the card, then swipe or use the buttons to schedule the next review."
+        action={<Button icon={isGenerating ? Loader2 : Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate from source</Button>}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Decks" value={String(data.flashcardDecks.length)} detail="Saved study sets" icon={Layers} accent="purple" />
-        <StatCard title="Due today" value={String(dueCards.length)} detail="Ready for review" icon={Brain} accent="orange" />
-        <StatCard title="Mastery" value={`${averageMastery}%`} detail="Average card strength" icon={CheckCircle2} accent="green" />
-        <StatCard title="Review streak" value={`${reviewStreak} day${reviewStreak === 1 ? "" : "s"}`} detail="From completed reviews" icon={Flame} accent="orange" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
-        <Card className="p-5">
-          <div className="flex flex-wrap gap-2" role="listbox" aria-label="Flashcard decks">
-            {data.flashcardDecks.map((deck) => (
-              <button
-                key={deck.id}
-                type="button"
-                aria-selected={selectedDeck?.id === deck.id}
-                onClick={() => setSelectedDeckId(deck.id)}
-                className={`rounded-2xl px-4 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25 ${selectedDeck?.id === deck.id ? "bg-accent text-white" : "bg-surface2 text-primary hover:bg-accent/10"}`}
-              >
-                {deck.name}
-              </button>
-            ))}
-            {!data.flashcardDecks.length && <span className="text-sm font-medium text-muted">No decks yet.</span>}
-          </div>
-          {selectedDeck && (
-            <div className="mt-5">
-              <div className="mb-2 flex items-center justify-between text-sm font-bold">
-                <span className="text-primary">Deck completion</span>
-                <span className="text-muted">{deckCompletion}%</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-surface2">
-                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${deckCompletion}%` }} />
-              </div>
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-xl font-bold text-primary">Session summary</h2>
-          <p className="mt-2 text-sm font-medium text-muted">{sessionTotal} cards reviewed this session</p>
-          <div className="mt-4 grid grid-cols-4 gap-2">
-            {ratingConfig.map((rating) => (
-              <div key={rating.key} className="rounded-2xl bg-surface2 p-3 text-center">
-                <p className="text-lg font-bold text-primary">{sessionReviews[rating.key]}</p>
-                <p className="text-xs font-semibold text-muted">{rating.label}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
+      {generationError && <ErrorState title="Flashcard generation failed" message={generationError} />}
+      {isGenerating && <LoadingState label="Generating source-derived flashcards" />}
 
       {!selectedDeck || deckCards.length === 0 ? (
-        <EmptyState title="No flashcards yet" description="Generate a deck from a source or create cards from a chat answer." />
+        <EmptyState
+          title="No flashcards yet"
+          description="Upload a document and generate your first study deck."
+          action={<Button icon={Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate deck</Button>}
+        />
+      ) : hasCompletedSession ? (
+        <Card className="mx-auto max-w-2xl bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,244,251,0.92))] p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+          <h2 className="mt-5 text-3xl font-semibold text-primary">Session complete</h2>
+          <p className="mt-2 text-sm text-muted">You reviewed {sessionTotal} card{sessionTotal === 1 ? "" : "s"}.</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-rose-100 bg-rose-50 p-4">
+              <p className="text-2xl font-semibold text-rose-700">{needsPractice}</p>
+              <p className="mt-1 text-xs font-medium text-rose-700">cards need more practice</p>
+            </div>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+              <p className="text-2xl font-semibold text-emerald-700">{movedForward}</p>
+              <p className="mt-1 text-xs font-medium text-emerald-700">cards moved forward</p>
+            </div>
+          </div>
+          <Button className="mt-7" variant="outline" icon={Undo2} onClick={() => {
+            setReviewedCardIds([]);
+            setIsFlipped(false);
+            setSessionReviews({ again: 0, hard: 0, good: 0, easy: 0 });
+          }}>
+            Review this deck again
+          </Button>
+        </Card>
+      ) : !currentCard ? (
+        <EmptyState
+          title="No cards due"
+          description="This deck is caught up. Generate a new deck or come back when the next reviews are due."
+          action={<Button variant="outline" icon={Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate deck</Button>}
+        />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {deckCards.map((card) => {
-            const flipped = !!flippedCardIds[card.id];
-            return (
-              <Card key={card.id} className="flex min-h-[23rem] flex-col p-6" interactive>
-                <div className="flex items-center justify-between gap-3">
-                  <Badge color="purple">{card.tags[0] ?? "Study"}</Badge>
-                  <Badge color={(card.masteryScore ?? 0) >= 75 ? "green" : (card.masteryScore ?? 0) >= 40 ? "orange" : "red"}>
-                    {card.masteryScore ?? 0}% mastery
-                  </Badge>
-                </div>
-                <button
-                  type="button"
-                  aria-label={flipped ? "Show question" : "Show answer"}
-                  onClick={() => setFlippedCardIds((prev) => ({ ...prev, [card.id]: !prev[card.id] }))}
-                  className="mt-6 flex flex-1 flex-col items-center justify-center rounded-3xl bg-surface2 p-6 text-center transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+        <section className="mx-auto flex max-w-4xl flex-col items-center">
+          <div className="mb-5 w-full text-center">
+            <h2 className="text-2xl font-semibold tracking-tight text-primary">{selectedDeck.name}</h2>
+            <p className="mt-2 text-sm text-muted">Card {currentPosition} of {sessionCardIds.length}</p>
+          </div>
+
+          <div key={currentCard.id} className="relative w-full max-w-3xl touch-pan-y select-none animate-card-enter">
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute left-6 top-8 z-10 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm font-medium text-rose-700 transition-opacity ${swipeIntent === "left" ? "opacity-100" : "opacity-0"}`}
+            >
+              Review again
+            </div>
+            <div
+              aria-hidden="true"
+              className={`pointer-events-none absolute right-6 top-8 z-10 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700 transition-opacity ${swipeIntent === "right" ? "opacity-100" : "opacity-0"}`}
+            >
+              Knew it
+            </div>
+
+            <button
+              type="button"
+              aria-label={isFlipped ? "Flashcard answer. Press Space to show question." : "Flashcard question. Press Space to show answer."}
+              onClick={handleCardClick}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={finishDrag}
+              onPointerCancel={finishDrag}
+              className="min-h-[30rem] w-full rounded-3xl border border-fuchsia-100 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,247,253,0.98)_48%,rgba(247,240,255,0.98))] p-8 text-left shadow-[0_22px_70px_-44px_rgba(168,85,247,0.55)] transition-transform duration-200 hover:shadow-[0_26px_82px_-46px_rgba(168,85,247,0.62)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/80 sm:p-12"
+              style={{
+                transform: `translateX(${drag.offsetX}px) rotate(${rotate}deg)`,
+                transitionDuration: drag.active ? "0ms" : "200ms",
+              }}
+            >
+              <div className="perspective-1000 min-h-[24rem]">
+                <div
+                  className="relative min-h-[24rem] transition-transform duration-500 preserve-3d"
+                  style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
                 >
-                  <RotateCw className="mb-5 h-6 w-6 text-accent" />
-                  <p className="text-lg font-bold leading-8 text-primary">{flipped ? card.answer : card.question}</p>
-                </button>
-                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {ratingConfig.map((rating) => (
-                    <Button
-                      key={rating.key}
-                      variant={rating.variant}
-                      className="min-h-10 px-2 py-2 text-xs"
-                      onClick={() => review(card.id, rating.key)}
-                    >
-                      {rating.label}
-                    </Button>
-                  ))}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center backface-hidden">
+                    <p className="text-sm font-medium text-muted">Question</p>
+                    <p className="mt-6 max-w-2xl text-3xl font-semibold leading-tight text-primary md:text-4xl">
+                      {currentCard.question}
+                    </p>
+                  </div>
+                  <div className="absolute inset-0 flex rotate-y-180 flex-col items-center justify-center text-center backface-hidden">
+                    <p className="text-sm font-medium text-muted">Answer</p>
+                    <p className="mt-6 max-w-2xl text-2xl font-semibold leading-9 text-primary md:text-3xl">
+                      {currentCard.answer}
+                    </p>
+                    {currentCard.sourceExcerpt && (
+                      <p className="mt-8 max-w-2xl rounded-xl border border-fuchsia-100 bg-white/65 p-4 text-sm leading-6 text-muted">
+                        Source: {currentCard.sourceExcerpt}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-4 text-xs font-semibold text-muted">
-                  Reviews: {card.reviewCount ?? 0} · Next: {card.nextReviewDate ? new Date(card.nextReviewDate).toLocaleDateString() : "today"}
-                </p>
-              </Card>
-            );
-          })}
-        </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-5 w-full max-w-3xl">
+            <div className="h-2 overflow-hidden rounded-full bg-white/70">
+              <div className="h-full rounded-full bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 transition-all" style={{ width: `${(currentPosition / sessionCardIds.length) * 100}%` }} />
+            </div>
+            <p className="mt-4 text-center text-sm text-muted">
+              {isFlipped ? "Swipe right if you knew it, left to review again." : "Tap the card or press Space to reveal the answer."}
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Button variant="outline" icon={RotateCw} disabled={!isFlipped} onClick={() => submitReview("again")}>Review again</Button>
+              <Button variant="primary" icon={CheckCircle2} disabled={!isFlipped} onClick={() => submitReview("good")}>I knew it</Button>
+            </div>
+          </div>
+
+          <div className="mt-8 grid w-full gap-4 md:grid-cols-3">
+            <Card className="p-4">
+              <p className="text-xs font-medium text-muted">Deck</p>
+              <div className="mt-2 flex flex-wrap gap-2" role="listbox" aria-label="Flashcard decks">
+                {data.flashcardDecks.slice(0, 4).map((deck) => (
+                  <button
+                    key={deck.id}
+                    type="button"
+                    aria-selected={selectedDeck?.id === deck.id}
+                    onClick={() => setSelectedDeckId(deck.id)}
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
+                      selectedDeck?.id === deck.id ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:border-fuchsia-200 hover:text-primary"
+                    }`}
+                  >
+                    {deck.name}
+                  </button>
+                ))}
+              </div>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-medium text-muted">Source</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {readySources.slice(0, 3).map((source) => (
+                  <button
+                    key={source.id}
+                    type="button"
+                    aria-pressed={selectedSourceId === source.id}
+                    onClick={() => setSelectedSourceId(source.id)}
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
+                      selectedSourceId === source.id ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:border-fuchsia-200 hover:text-primary"
+                    }`}
+                  >
+                    {source.name}
+                  </button>
+                ))}
+              </div>
+            </Card>
+            <Card className="p-4">
+              <p className="text-xs font-medium text-muted">Session</p>
+              <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-lg font-semibold text-primary">{sessionTotal}</p>
+                  <p className="text-xs text-muted">Reviewed</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-emerald-700">{movedForward}</p>
+                  <p className="text-xs text-muted">Known</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-rose-700">{needsPractice}</p>
+                  <p className="text-xs text-muted">Review</p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
       )}
     </div>
   );

@@ -12,8 +12,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        heading: ['Fredoka', 'sans-serif'],
+        sans: ['Inter', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        heading: ['Inter', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         background: "var(--bg)",
@@ -35,8 +35,8 @@ export default {
         '3': '3px',
       },
       boxShadow: {
-        'brutal': '6px 6px 0px 0px var(--shadow)',
-        'brutal-lg': '8px 8px 0px 0px var(--shadow)',
+        'brutal': '0 1px 2px 0 var(--shadow)',
+        'brutal-lg': '0 10px 30px -24px var(--shadow)',
       }
     },
   },

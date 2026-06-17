@@ -11,6 +11,7 @@ export type SourceStatus = 'processing' | 'ready' | 'failed';
 
 export type Source = {
   id: string;
+  ownerId?: string;
   name: string;
   type: SourceType;
   date: string;
@@ -28,6 +29,7 @@ export type Source = {
 
 export type Material = {
   id: string;
+  ownerId?: string;
   sourceId: string;
   title: string;
   content: string;
@@ -51,12 +53,14 @@ export type Message = {
 };
 
 export type ChatMessage = Message & {
+  ownerId?: string;
   sourceIds?: string[];
   savedAsNote?: boolean;
 };
 
 export type ChatSession = {
   id: string;
+  ownerId?: string;
   title: string;
   sourceIds: string[];
   messages: ChatMessage[];
@@ -66,10 +70,14 @@ export type ChatSession = {
 
 export type Flashcard = {
   id: string;
+  ownerId?: string;
   deckId?: string;
   question: string;
   answer: string;
   tags: string[];
+  topic?: string;
+  difficulty?: string;
+  sourceExcerpt?: string;
   masteryScore?: number;
   nextReviewDate?: string;
   reviewCount?: number;
@@ -79,6 +87,7 @@ export type Flashcard = {
 
 export type FlashcardDeck = {
   id: string;
+  ownerId?: string;
   name: string;
   sourceId?: string;
   description?: string;
@@ -90,6 +99,7 @@ export type FlashcardReviewRating = 'again' | 'hard' | 'good' | 'easy';
 
 export type FlashcardReview = {
   id: string;
+  ownerId?: string;
   flashcardId: string;
   rating: FlashcardReviewRating;
   reviewedAt: string;
@@ -101,6 +111,7 @@ export type QuizDifficulty = 'easy' | 'medium' | 'hard';
 
 export type QuizQuestion = {
   id: string;
+  ownerId?: string;
   topic: string;
   difficulty: QuizDifficulty;
   prompt: string;
@@ -108,6 +119,7 @@ export type QuizQuestion = {
   correctChoiceIndex: number;
   explanation: string;
   sourceId?: string;
+  sourceExcerpt?: string;
 };
 
 export type Quiz = {
@@ -120,6 +132,7 @@ export type Quiz = {
 
 export type QuizAttempt = {
   id: string;
+  ownerId?: string;
   quizId: string;
   answers: Record<string, number>;
   score: number;
@@ -130,6 +143,7 @@ export type QuizAttempt = {
 
 export type LearningInsight = {
   id: string;
+  ownerId?: string;
   title: string;
   body: string;
   topic?: string;
@@ -139,6 +153,7 @@ export type LearningInsight = {
 
 export type StudyGoal = {
   id: string;
+  ownerId?: string;
   title: string;
   targetDate: string;
   progress: number;
