@@ -40,7 +40,7 @@ const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
       />
 
       <section className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
-        <Card className="pastel-sheen overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,0.96),rgba(255,244,251,0.96)_48%,rgba(245,239,255,0.96))] p-6 md:p-8">
+        <Card className="surface-sheen overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-6 md:p-8 dark:bg-[linear-gradient(135deg,rgba(23,32,51,1),rgba(30,41,59,1))]">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div className="max-w-2xl">
               <p className="text-sm font-medium text-muted">Continue Learning</p>
@@ -63,12 +63,12 @@ const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
               <span className="font-medium text-muted">Learning progress</span>
               <span className="font-medium text-primary">{progress}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/70">
-              <div className="h-full rounded-full bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 transition-all" style={{ width: `${progress}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-surface2">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
             </div>
             <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-              <span className="rounded-md border border-fuchsia-100 bg-white/75 px-2 py-1">{dueCards.length} cards due today</span>
-              <span className="rounded-md border border-violet-100 bg-white/75 px-2 py-1">{data.quizQuestions.length ? "Quiz available" : "Quiz can be generated"}</span>
+              <span className="rounded-md border border-default bg-white px-2 py-1 dark:bg-white/5">{dueCards.length} cards due today</span>
+              <span className="rounded-md border border-default bg-white px-2 py-1 dark:bg-white/5">{data.quizQuestions.length ? "Quiz available" : "Quiz can be generated"}</span>
             </div>
           </div>
 
@@ -84,9 +84,9 @@ const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
           )}
         </Card>
 
-        <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.94),rgba(255,241,249,0.92))] p-6 md:p-8">
+        <Card className="p-6 md:p-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
               <Sparkles className="h-4 w-4" />
             </div>
             <p className="text-sm font-medium text-muted">AI Study Coach</p>
@@ -115,10 +115,10 @@ const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
                 <Link
                   key={source.id}
                   to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}
-                  className="group flex items-center justify-between gap-4 rounded-xl border border-default bg-white/80 p-4 transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-pink-50/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
+                  className="group flex items-center justify-between gap-4 rounded-xl border border-default bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
                 >
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-accent dark:bg-indigo-400/10">
                       <FileText className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
@@ -155,7 +155,7 @@ const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
                 <Link
                   key={card.id}
                   to={AppRoute.FLASHCARDS}
-                  className="block rounded-xl border border-default bg-white/80 p-4 transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-pink-50/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
+                  className="block rounded-xl border border-default bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
                 >
                   <p className="line-clamp-2 text-sm font-medium leading-6 text-primary">{card.question}</p>
                   <p className="mt-2 text-xs text-muted">{card.masteryScore ?? 0}% mastery - {card.reviewCount ?? 0} reviews</p>

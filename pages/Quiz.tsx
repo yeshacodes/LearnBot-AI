@@ -28,6 +28,7 @@ const Quiz: React.FC = () => {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [confidence, setConfidence] = useState<Record<string, "low" | "medium" | "high">>({});
   const [submitted, setSubmitted] = useState(false);
   const [retryQuestionIds, setRetryQuestionIds] = useState<string[]>([]);
 
@@ -58,6 +59,7 @@ const Quiz: React.FC = () => {
 
   const currentQuestion: QuizQuestion | undefined = questions[currentIndex];
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] : undefined;
+  const selectedConfidence = currentQuestion ? confidence[currentQuestion.id] : undefined;
   const isAnswered = selectedAnswer !== undefined;
   const answeredCount = questions.filter((question) => answers[question.id] !== undefined).length;
   const score = questions.filter((question) => answers[question.id] === question.correctChoiceIndex).length;
@@ -66,6 +68,7 @@ const Quiz: React.FC = () => {
 
   const resetQuiz = (clearRetry = true) => {
     setAnswers({});
+    setConfidence({});
     setSubmitted(false);
     setCurrentIndex(0);
     if (clearRetry) setRetryQuestionIds([]);
@@ -97,7 +100,7 @@ const Quiz: React.FC = () => {
   };
 
   const chooseAnswer = (answerIndex: number) => {
-    if (!currentQuestion || submitted) return;
+    if (!currentQuestion || submitted || !selectedConfidence) return;
     setAnswers((prev) => ({ ...prev, [currentQuestion.id]: answerIndex }));
   };
 
@@ -110,6 +113,7 @@ const Quiz: React.FC = () => {
     const ids = incorrectQuestions.map((question) => question.id);
     setRetryQuestionIds(ids);
     setAnswers({});
+    setConfidence({});
     setSubmitted(false);
     setCurrentIndex(0);
   };
@@ -135,7 +139,7 @@ const Quiz: React.FC = () => {
                   type="button"
                   onClick={() => toggleSource(source.id)}
                   aria-pressed={selectedSourceIds.includes(source.id)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 ${selectedSourceIds.includes(source.id) ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:-translate-y-0.5 hover:border-fuchsia-200 hover:text-primary"}`}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 ${selectedSourceIds.includes(source.id) ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:-translate-y-0.5 hover:border-indigo-200 hover:text-primary dark:bg-white/5"}`}
                 >
                   {source.name}
                 </button>
@@ -185,10 +189,10 @@ const Quiz: React.FC = () => {
         />
       ) : submitted ? (
         <div className="mx-auto max-w-4xl">
-          <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,246,252,0.92))] p-8">
+          <Card className="p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-amber-100 text-amber-700">
+                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
                   <Trophy className="h-8 w-8" />
                 </div>
                 <h2 className="mt-5 text-3xl font-semibold text-primary">Score: {score} / {questions.length}</h2>
@@ -199,7 +203,7 @@ const Quiz: React.FC = () => {
                 <Button variant="soft" icon={Target} disabled={!incorrectQuestions.length} onClick={retryIncorrect}>Retry incorrect</Button>
               </div>
             </div>
-            <div className="mt-8 rounded-2xl border border-fuchsia-100 bg-white/65 p-5">
+            <div className="mt-8 rounded-2xl border border-default bg-slate-50 p-5 dark:bg-white/5">
               <h3 className="font-semibold text-primary">Recommended next step</h3>
               <p className="mt-2 text-sm leading-6 text-muted">
                 {weakTopics.length ? `Review ${weakTopics.join(", ")} next, then retry only the missed questions.` : "No weak topics this round. Move up a difficulty or review flashcards to retain it."}
@@ -218,7 +222,7 @@ const Quiz: React.FC = () => {
                       setSubmitted(false);
                       setCurrentIndex(index);
                     }}
-                    className="w-full rounded-xl border border-default bg-white/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-pink-50/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
+                    className="w-full rounded-xl border border-default bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="line-clamp-1 text-sm font-medium text-primary">{question.prompt}</p>
@@ -238,11 +242,11 @@ const Quiz: React.FC = () => {
               <span>Question {currentIndex + 1} of {questions.length}</span>
               <span>{answeredCount} answered</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-white/70">
-              <div className="h-full rounded-full bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-surface2">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
             </div>
           </div>
-          <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,248,253,0.92))] p-6 md:p-8">
+          <Card className="p-6 md:p-8">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Badge color="gray">{currentQuestion.topic}</Badge>
               <Badge color={currentQuestion.difficulty === "hard" ? "red" : currentQuestion.difficulty === "medium" ? "orange" : "green"}>
@@ -254,6 +258,27 @@ const Quiz: React.FC = () => {
               Choose the best answer
             </div>
             <h2 className="mt-5 text-2xl font-semibold leading-9 text-primary md:text-3xl">{currentQuestion.prompt}</h2>
+            <div className="mt-6 rounded-2xl border border-default bg-slate-50 p-4 dark:bg-white/5">
+              <p className="text-sm font-medium text-primary">How confident are you before answering?</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {(["low", "medium", "high"] as const).map((level) => (
+                  <button
+                    key={level}
+                    type="button"
+                    aria-pressed={selectedConfidence === level}
+                    disabled={isAnswered}
+                    onClick={() => setConfidence((prev) => ({ ...prev, [currentQuestion.id]: level }))}
+                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 disabled:opacity-60 ${
+                      selectedConfidence === level
+                        ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10"
+                        : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
+                    }`}
+                  >
+                    {level}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="mt-6 space-y-3">
               {currentQuestion.choices.map((choice, index) => {
                 const isCorrect = index === currentQuestion.correctChoiceIndex;
@@ -263,6 +288,7 @@ const Quiz: React.FC = () => {
                   <button
                     key={choice}
                     type="button"
+                    disabled={!selectedConfidence && !reveal}
                     onClick={() => chooseAnswer(index)}
                     aria-pressed={isSelected}
                     className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
@@ -271,8 +297,10 @@ const Quiz: React.FC = () => {
                         : reveal && isSelected
                           ? "border-rose-200 bg-rose-50 text-rose-800"
                           : isSelected
-                            ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary"
-                            : "border-default bg-white/80 text-primary hover:border-fuchsia-200 hover:bg-pink-50/70"
+                            ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10"
+                            : selectedConfidence
+                              ? "border-default bg-white text-primary hover:border-indigo-200 hover:bg-slate-50 dark:bg-white/5 dark:hover:bg-white/10"
+                              : "border-default bg-slate-50 text-muted dark:bg-white/5"
                     }`}
                   >
                     {reveal && isCorrect ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
@@ -282,7 +310,7 @@ const Quiz: React.FC = () => {
               })}
             </div>
             {isAnswered && (
-              <div className="mt-6 rounded-2xl border border-fuchsia-100 bg-white/65 p-5">
+              <div className="mt-6 rounded-2xl border border-default bg-slate-50 p-5 dark:bg-white/5">
                 <h3 className="font-semibold text-primary">{selectedAnswer === currentQuestion.correctChoiceIndex ? "Correct" : "Good try"}</h3>
                 <p className="mt-2 text-sm leading-6 text-muted">{currentQuestion.explanation}</p>
                 {currentQuestion.sourceExcerpt && (

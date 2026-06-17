@@ -69,7 +69,7 @@ const ResetPassword: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="mb-10 flex flex-col items-center text-center">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
             <Layers className="h-10 w-10" />
           </div>
           <h1 className="font-heading text-4xl font-bold tracking-tight text-primary">Set new password</h1>

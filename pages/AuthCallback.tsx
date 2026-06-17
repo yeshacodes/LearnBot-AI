@@ -47,7 +47,7 @@ const AuthCallback: React.FC = () => {
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-10">
-          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-accent/20">
+          <div className="w-16 h-16 bg-accent rounded-2xl flex items-center justify-center mb-4 shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
             <Layers className="text-white w-10 h-10" />
           </div>
           <h1 className="text-3xl font-bold text-primary">Signing you in...</h1>

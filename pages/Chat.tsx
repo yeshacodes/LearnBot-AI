@@ -164,7 +164,7 @@ const Chat: React.FC = () => {
   };
 
   const panelContent = (
-    <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-default bg-card/85 p-3 shadow-[0_16px_42px_-34px_var(--shadow)]">
+    <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-default bg-card p-3 shadow-[0_14px_38px_-32px_var(--shadow)]">
       <section className="border-b border-default pb-3">
         <div className="flex items-center justify-between px-2">
           <h2 className="text-xs font-medium text-muted">Recent chats</h2>
@@ -180,7 +180,7 @@ const Chat: React.FC = () => {
                   setSessionId(item.id);
                   setMobilePanelsOpen(false);
                 }}
-                className={`w-full rounded-lg px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 ${item.id === session?.id ? "bg-white text-primary shadow-sm" : "text-muted hover:bg-pink-50/70 hover:text-primary"}`}
+                className={`w-full rounded-lg px-3 py-2 text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 ${item.id === session?.id ? "bg-slate-50 text-primary shadow-sm dark:bg-white/10" : "text-muted hover:bg-slate-50 hover:text-primary dark:hover:bg-white/10"}`}
               >
                 <p className="line-clamp-1 text-sm font-medium">{item.title}</p>
                 <p className="mt-1 text-xs text-muted">{item.messages.length} messages - {new Date(item.updatedAt).toLocaleDateString()}</p>
@@ -207,7 +207,7 @@ const Chat: React.FC = () => {
               setSelectedSourceIds([]);
               setMobilePanelsOpen(false);
             }}
-            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 ${selectedSourceIds.length === 0 ? "bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "text-muted hover:-translate-y-0.5 hover:bg-pink-50/70 hover:text-primary"}`}
+            className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 ${selectedSourceIds.length === 0 ? "bg-indigo-50 text-primary dark:bg-indigo-400/10" : "text-muted hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary dark:hover:bg-white/10"}`}
           >
             <Sparkles className="h-4 w-4" />
             <span className="min-w-0 flex-1">All ready sources</span>
@@ -225,10 +225,10 @@ const Chat: React.FC = () => {
                 type="button"
                 onClick={() => toggleSourceSelection(source.id)}
                 aria-pressed={isSelected}
-                className={`w-full rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 ${
+                className={`w-full rounded-xl border p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 ${
                   isSelected
-                    ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary shadow-sm"
-                    : "border-transparent bg-transparent text-muted hover:border-fuchsia-100 hover:bg-white/70 hover:text-primary"
+                    ? "border-indigo-200 bg-indigo-50 text-primary shadow-sm dark:border-indigo-400/20 dark:bg-indigo-400/10"
+                    : "border-transparent bg-transparent text-muted hover:border-slate-200 hover:bg-slate-50 hover:text-primary dark:hover:border-white/10 dark:hover:bg-white/10"
                 }`}
               >
                 <div className="flex min-w-0 items-start gap-3">
@@ -308,7 +308,7 @@ const Chat: React.FC = () => {
                 ) : (
                   session.messages.map((message) => (
                     <div key={message.id} className={`flex w-full ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[min(88%,880px)] rounded-2xl border p-4 shadow-[0_16px_42px_-34px_var(--shadow)] ${message.role === "user" ? "border-fuchsia-300 bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 text-white" : "border-default bg-white/85 text-primary"}`}>
+                    <div className={`max-w-[min(88%,880px)] rounded-2xl border p-4 shadow-[0_16px_42px_-34px_var(--shadow)] ${message.role === "user" ? "border-indigo-600 bg-indigo-600 text-white" : "border-default bg-white text-primary dark:bg-white/5"}`}>
                       <div className="mb-2 flex items-center justify-between gap-4">
                         <span className={`text-xs font-medium ${message.role === "user" ? "text-white/75" : "text-muted"}`}>{message.role === "user" ? "You" : "LearnBot"}</span>
                         <time className={`text-xs ${message.role === "user" ? "text-white/70" : "text-muted"}`}>{formatTime(message.timestamp)}</time>
@@ -317,7 +317,7 @@ const Chat: React.FC = () => {
                       {message.citations?.length ? (
                         <div className="mt-4 space-y-2">
                           {message.citations.map((citation, index) => (
-                            <div key={`${message.id}-${index}`} className="rounded-lg border border-fuchsia-100 bg-pink-50/60 p-2 text-xs text-muted">
+                            <div key={`${message.id}-${index}`} className="rounded-lg border border-default bg-slate-50 p-2 text-xs text-muted dark:bg-white/5">
                               <span className="font-medium text-primary">{citation.title}</span>: {citation.snippet}
                             </div>
                           ))}
@@ -336,7 +336,7 @@ const Chat: React.FC = () => {
                 )}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="inline-flex items-center gap-2 rounded-2xl border border-fuchsia-100 bg-white/85 px-4 py-3 text-sm font-medium text-muted shadow-sm">
+                    <div className="inline-flex items-center gap-2 rounded-2xl border border-default bg-white px-4 py-3 text-sm font-medium text-muted shadow-sm dark:bg-white/5">
                       <Loader2 className="h-4 w-4 animate-spin text-accent" />
                       LearnBot is typing
                     </div>
@@ -353,13 +353,13 @@ const Chat: React.FC = () => {
                     type="button"
                     disabled={readySources.length === 0 || isLoading || selectedHasNoChunks}
                     onClick={() => handleSendMessage(prompt)}
-                    className="rounded-xl border border-fuchsia-100 bg-white/80 px-3 py-2 text-sm font-medium text-primary transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:bg-pink-50/70 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 disabled:pointer-events-none disabled:opacity-50"
+                    className="rounded-xl border border-default bg-white px-3 py-2 text-sm font-medium text-primary transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 disabled:pointer-events-none disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     {prompt}
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-2 rounded-2xl border border-fuchsia-100 bg-white/85 p-2 shadow-[0_14px_38px_-32px_var(--shadow)]">
+              <div className="flex items-center gap-2 rounded-2xl border border-default bg-white p-2 shadow-[0_14px_38px_-32px_var(--shadow)] dark:bg-white/5">
                 <input
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}

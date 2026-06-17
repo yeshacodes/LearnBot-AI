@@ -3,33 +3,33 @@
 @tailwind utilities;
 
 :root {
-  --bg: #fff7fd;
-  --surface: rgba(255, 255, 255, 0.9);
-  --surface2: #f8edff;
-  --border: #efdff8;
-  --text: #26192d;
-  --muted: #77677f;
-  --accent: #a855f7;
-  --secondary: #ffe4f3;
-  --yellow: #f59e0b;
-  --purple: #c084fc;
-  --green: #22c55e;
-  --shadow: rgba(168, 85, 247, 0.16);
+  --bg: #fbf8f3;
+  --surface: #ffffff;
+  --surface2: #f3ece3;
+  --border: #e8ded4;
+  --text: #1f1b2d;
+  --muted: #6f677a;
+  --accent: #8b5cf6;
+  --secondary: #d97745;
+  --yellow: #d97745;
+  --purple: #8b5cf6;
+  --green: #8faf9c;
+  --shadow: rgba(91, 64, 43, 0.12);
 }
 
 .dark {
-  --bg: #11101b;
-  --surface: rgba(30, 28, 44, 0.86);
-  --surface2: #1b1929;
-  --border: rgba(191, 178, 255, 0.18);
-  --text: #f7f4ff;
-  --muted: #b8afd0;
-  --accent: #c084fc;
-  --secondary: #67e8f9;
+  --bg: #0f172a;
+  --surface: #172033;
+  --surface2: #1e293b;
+  --border: rgba(148, 163, 184, 0.22);
+  --text: #f8fafc;
+  --muted: #aab6c7;
+  --accent: #818cf8;
+  --secondary: #2dd4bf;
   --yellow: #fde68a;
-  --purple: #a78bfa;
+  --purple: #a5b4fc;
   --green: #86efac;
-  --shadow: rgba(0, 0, 0, 0.35);
+  --shadow: rgba(0, 0, 0, 0.28);
 }
 
 html,
@@ -44,9 +44,9 @@ body {
   color: var(--text);
   background-attachment: fixed;
   background-image:
-    radial-gradient(circle at 10% 5%, rgba(244, 114, 182, 0.18), transparent 28rem),
-    radial-gradient(circle at 92% 0%, rgba(168, 85, 247, 0.16), transparent 30rem),
-    linear-gradient(180deg, #fff7fd 0%, #fbf7ff 46%, #f8f7ff 100%);
+    linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(251,248,243,0) 26rem),
+    radial-gradient(circle at 82% 4%, rgba(239, 167, 200, 0.18), transparent 28rem),
+    radial-gradient(circle at 12% 12%, rgba(143, 175, 156, 0.12), transparent 24rem);
 }
 
 button,
@@ -94,7 +94,7 @@ textarea {
   box-shadow: 0 16px 35px -18px color-mix(in oklab, var(--accent) 55%, transparent);
 }
 
-@keyframes pastel-sheen {
+@keyframes surface-sheen {
   from {
     background-position: 0% 50%;
   }
@@ -103,9 +103,9 @@ textarea {
   }
 }
 
-.pastel-sheen {
+.surface-sheen {
   background-size: 180% 180%;
-  animation: pastel-sheen 8s ease-in-out infinite alternate;
+  animation: surface-sheen 10s ease-in-out infinite alternate;
 }
 
 @keyframes card-enter {

@@ -45,8 +45,8 @@ const Settings: React.FC<SettingsProps> = ({ user, isDarkMode, toggleDarkMode })
         <Card className="p-8">
           <div className="flex items-start justify-between gap-5">
             <div>
-              <h2 className="text-2xl font-bold text-primary">Theme</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-muted">Choose the visual mode that feels best for focused study.</p>
+              <h2 className="text-2xl font-semibold text-primary">Theme</h2>
+              <p className="mt-2 text-sm leading-6 text-muted">Choose the visual mode that feels best for focused study.</p>
             </div>
             <div className="rounded-2xl bg-surface2 p-3 text-accent">
               {isDarkMode ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
@@ -56,24 +56,24 @@ const Settings: React.FC<SettingsProps> = ({ user, isDarkMode, toggleDarkMode })
             type="button"
             onClick={toggleDarkMode}
             aria-pressed={isDarkMode}
-            className="mt-8 flex w-full items-center justify-between rounded-3xl bg-surface2 p-4 text-left transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/25"
+            className="mt-8 flex w-full items-center justify-between rounded-2xl border border-default bg-surface2 p-4 text-left transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 dark:hover:bg-white/10"
           >
             <span>
-              <span className="block text-sm font-bold text-primary">{isDarkMode ? "Dark mode" : "Light mode"}</span>
-              <span className="mt-1 block text-sm font-medium text-muted">Soft UI colors update across the app.</span>
+              <span className="block text-sm font-semibold text-primary">{isDarkMode ? "Dark mode" : "Light mode"}</span>
+              <span className="mt-1 block text-sm text-muted">Comfortable contrast updates across the app.</span>
             </span>
-            <span className={`flex h-8 w-14 items-center rounded-full p-1 transition ${isDarkMode ? "bg-accent" : "bg-white/80"}`}>
+            <span className={`flex h-8 w-14 items-center rounded-full p-1 transition ${isDarkMode ? "bg-accent" : "bg-white"}`}>
               <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition ${isDarkMode ? "translate-x-6" : "translate-x-0"}`} />
             </span>
           </button>
         </Card>
 
         <Card className="p-8">
-          <h2 className="text-2xl font-bold text-primary">Account</h2>
-          <p className="mt-2 text-sm font-medium leading-6 text-muted">Signed in as {user?.email ?? "unknown@example.com"}.</p>
-          <div className="mt-8 rounded-3xl bg-surface2 p-5">
-            <p className="text-sm font-bold text-primary">{user?.name ?? "LearnBot user"}</p>
-            <p className="mt-1 text-sm font-medium text-muted">{user?.email ?? "No email available"}</p>
+          <h2 className="text-2xl font-semibold text-primary">Account</h2>
+          <p className="mt-2 text-sm leading-6 text-muted">Signed in as {user?.email ?? "unknown@example.com"}.</p>
+          <div className="mt-8 rounded-2xl border border-default bg-surface2 p-5">
+            <p className="text-sm font-semibold text-primary">{user?.name ?? "LearnBot user"}</p>
+            <p className="mt-1 text-sm text-muted">{user?.email ?? "No email available"}</p>
           </div>
           <Button onClick={handleLogout} disabled={isSigningOut} className="mt-6" variant="danger" icon={LogOut}>
             {isSigningOut ? "Signing out..." : "Sign out"}

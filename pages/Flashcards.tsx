@@ -197,7 +197,7 @@ const FlashcardsPage: React.FC = () => {
           action={<Button icon={Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate deck</Button>}
         />
       ) : hasCompletedSession ? (
-        <Card className="mx-auto max-w-2xl bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,244,251,0.92))] p-8 text-center">
+        <Card className="mx-auto max-w-2xl p-8 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
             <CheckCircle2 className="h-6 w-6" />
           </div>
@@ -256,7 +256,7 @@ const FlashcardsPage: React.FC = () => {
               onPointerMove={handlePointerMove}
               onPointerUp={finishDrag}
               onPointerCancel={finishDrag}
-              className="min-h-[30rem] w-full rounded-3xl border border-fuchsia-100 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,247,253,0.98)_48%,rgba(247,240,255,0.98))] p-8 text-left shadow-[0_22px_70px_-44px_rgba(168,85,247,0.55)] transition-transform duration-200 hover:shadow-[0_26px_82px_-46px_rgba(168,85,247,0.62)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/80 sm:p-12"
+              className="min-h-[30rem] w-full rounded-2xl border border-default bg-white p-8 text-left shadow-[0_24px_72px_-48px_rgba(15,23,42,0.34)] transition-transform duration-200 hover:border-indigo-200 hover:shadow-[0_28px_80px_-50px_rgba(15,23,42,0.4)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 sm:p-12 dark:bg-surface"
               style={{
                 transform: `translateX(${drag.offsetX}px) rotate(${rotate}deg)`,
                 transitionDuration: drag.active ? "0ms" : "200ms",
@@ -279,7 +279,7 @@ const FlashcardsPage: React.FC = () => {
                       {currentCard.answer}
                     </p>
                     {currentCard.sourceExcerpt && (
-                      <p className="mt-8 max-w-2xl rounded-xl border border-fuchsia-100 bg-white/65 p-4 text-sm leading-6 text-muted">
+                      <p className="mt-8 max-w-2xl rounded-xl border border-default bg-slate-50 p-4 text-sm leading-6 text-muted dark:bg-white/5">
                         Source: {currentCard.sourceExcerpt}
                       </p>
                     )}
@@ -290,8 +290,8 @@ const FlashcardsPage: React.FC = () => {
           </div>
 
           <div className="mt-5 w-full max-w-3xl">
-            <div className="h-2 overflow-hidden rounded-full bg-white/70">
-              <div className="h-full rounded-full bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 transition-all" style={{ width: `${(currentPosition / sessionCardIds.length) * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full bg-surface2">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(currentPosition / sessionCardIds.length) * 100}%` }} />
             </div>
             <p className="mt-4 text-center text-sm text-muted">
               {isFlipped ? "Swipe right if you knew it, left to review again." : "Tap the card or press Space to reveal the answer."}
@@ -313,7 +313,7 @@ const FlashcardsPage: React.FC = () => {
                     aria-selected={selectedDeck?.id === deck.id}
                     onClick={() => setSelectedDeckId(deck.id)}
                     className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
-                      selectedDeck?.id === deck.id ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:border-fuchsia-200 hover:text-primary"
+                      selectedDeck?.id === deck.id ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
                     }`}
                   >
                     {deck.name}
@@ -331,7 +331,7 @@ const FlashcardsPage: React.FC = () => {
                     aria-pressed={selectedSourceId === source.id}
                     onClick={() => setSelectedSourceId(source.id)}
                     className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
-                      selectedSourceId === source.id ? "border-fuchsia-200 bg-gradient-to-r from-pink-50 to-violet-50 text-primary" : "border-default bg-white/80 text-muted hover:border-fuchsia-200 hover:text-primary"
+                      selectedSourceId === source.id ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
                     }`}
                   >
                     {source.name}

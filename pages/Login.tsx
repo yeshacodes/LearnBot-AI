@@ -89,7 +89,7 @@ const Login: React.FC = () => {
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="mb-10 flex flex-col items-center text-center">
-          <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
+          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent text-white shadow-[0_18px_38px_-24px_color-mix(in_oklab,var(--accent)_80%,transparent)]">
             <Layers className="h-10 w-10" />
           </div>
           <h1 className="font-heading text-4xl font-bold tracking-tight text-primary">{title}</h1>
@@ -123,7 +123,7 @@ const Login: React.FC = () => {
                 <label className="ml-1 text-sm font-semibold text-primary">Password</label>
                 <div className="relative">
                   <input
-                    className="w-full rounded-2xl border border-white/70 bg-white/70 px-4 py-3 pr-12 text-sm font-semibold text-primary outline-none transition-all placeholder:text-muted focus:border-accent focus:bg-white focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--accent)_16%,transparent)] dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10"
+                    className="w-full rounded-xl border border-default bg-white px-4 py-3 pr-12 text-sm font-semibold text-primary outline-none transition-all placeholder:text-muted focus:border-accent focus:bg-white focus:shadow-[0_0_0_4px_color-mix(in_oklab,var(--accent)_16%,transparent)] dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10"
                     type={passwordVisible ? "text" : "password"}
                     placeholder="Password"
                     required

@@ -176,10 +176,10 @@ const Upload: React.FC = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card className="bg-[linear-gradient(145deg,rgba(255,255,255,0.96),rgba(255,246,252,0.92))] p-8">
+        <Card className="p-8">
           {activeTab === "pdf" ? (
             <div className="space-y-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
                 <UploadCloud className="h-6 w-6" />
               </div>
               <div>
@@ -187,14 +187,14 @@ const Upload: React.FC = () => {
                 <p className="mt-2 text-sm leading-6 text-muted">Drop in PDFs and LearnBot will prepare a grounded study workspace.</p>
               </div>
               <input id="file-upload" type="file" multiple accept=".pdf" onChange={handleFileChange} className="hidden" />
-              <label htmlFor="file-upload" className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-fuchsia-300 bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_32px_-18px_rgba(168,85,247,0.85)] transition-all hover:-translate-y-0.5 focus-within:ring-4 focus-within:ring-fuchsia-200/70">
+              <label htmlFor="file-upload" className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-indigo-600 bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_-18px_rgba(79,70,229,0.85)] transition-all hover:-translate-y-0.5 hover:bg-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/15">
                 {isIngesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
                 Choose files
               </label>
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-teal-100 bg-teal-50 text-secondary dark:border-teal-400/20 dark:bg-teal-400/10">
                 <Globe className="h-6 w-6" />
               </div>
               <div>
@@ -214,7 +214,7 @@ const Upload: React.FC = () => {
           )}
           {error && <div className="mt-4"><ErrorState title="Ingestion notice" message={error} embedded /></div>}
           {isIngesting && (
-            <div className="mt-6 rounded-2xl border border-fuchsia-100 bg-white/75 p-4">
+            <div className="mt-6 rounded-2xl border border-default bg-white p-4 dark:bg-white/5">
               <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
                 <Loader2 className="h-4 w-4 animate-spin text-accent" />
                 Preparing source
@@ -222,7 +222,7 @@ const Upload: React.FC = () => {
               <div className="space-y-3">
                 {processingSteps.map((step, index) => (
                   <div key={step} className="flex items-center gap-3 text-sm">
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${index === 0 ? "border-fuchsia-300 bg-pink-50 text-accent" : "border-default bg-white/70 text-muted"}`}>
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${index === 0 ? "border-indigo-200 bg-indigo-50 text-accent" : "border-default bg-white text-muted dark:bg-white/5"}`}>
                       {index + 1}
                     </span>
                     <span className={index === 0 ? "font-medium text-primary" : "text-muted"}>{step}</span>
@@ -244,7 +244,7 @@ const Upload: React.FC = () => {
                 <Card key={source.id} className="p-5" interactive>
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="flex min-w-0 gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
                         {source.type === "url" ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                       </div>
                       <div className="min-w-0">

@@ -94,7 +94,7 @@ const Sources: React.FC = () => {
               <Card key={source.id} className="p-5" interactive>
                 <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex min-w-0 gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
                       {source.type === "url" ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                     </div>
                     <div className="min-w-0">

@@ -107,20 +107,20 @@ const DashboardLayout: React.FC = () => {
         ${navCollapsed ? 'lg:w-0 lg:p-0 lg:opacity-0 lg:overflow-hidden' : 'lg:w-64 lg:p-3 lg:opacity-100'}
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="flex h-full flex-col border-r border-default bg-card/85 backdrop-blur-xl">
+        <div className="flex h-full flex-col border-r border-default bg-card">
           {/* Logo */}
           <div className="flex h-20 items-center justify-between px-4">
             <div className="flex items-center gap-2 min-w-0">
               <button
                 type="button"
-                className="hidden rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 lg:inline-flex"
+                className="hidden rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 lg:inline-flex"
                 onClick={() => setBool(NAV_COLLAPSED_KEY, true)}
                 aria-label="Hide sidebar"
               >
                 <Menu className="h-4 w-4" />
               </button>
               <span className="whitespace-nowrap text-xl font-semibold tracking-tight text-primary">
-                Learn<span className="bg-gradient-to-r from-pink-500 to-violet-600 bg-clip-text text-transparent">Bot</span>
+                Learn<span className="text-accent">Bot</span>
               </span>
             </div>
             <button className="rounded-lg p-2 text-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 lg:hidden" onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar">
@@ -136,10 +136,10 @@ const DashboardLayout: React.FC = () => {
                 to={item.path}
                 onClick={() => setIsSidebarOpen(false)}
                 className={({ isActive }) => `
-                  group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70
+                  group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15
                   ${isActive 
-                    ? 'active-nav-shadow border border-fuchsia-100 bg-gradient-to-r from-pink-50 to-violet-50 text-primary font-medium' 
-                    : 'border border-transparent text-muted hover:-translate-y-0.5 hover:border-fuchsia-100 hover:bg-pink-50/70 hover:text-primary'}
+                    ? 'active-nav-shadow border border-indigo-100 bg-indigo-50 text-primary font-medium dark:border-indigo-400/20 dark:bg-indigo-400/10' 
+                    : 'border border-transparent text-muted hover:-translate-y-0.5 hover:border-slate-200 hover:bg-slate-50 hover:text-primary dark:hover:border-white/10 dark:hover:bg-white/10'}
                 `}
               >
                 <item.icon className="h-4 w-4 text-current" strokeWidth={1.8} />
@@ -153,7 +153,7 @@ const DashboardLayout: React.FC = () => {
             <button 
               onClick={handleLogoutClick}
               disabled={isSigningOut}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-default bg-white/80 px-3 py-2.5 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-pink-50/80 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-default bg-white px-3 py-2.5 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
             >
               <LogOut className="w-4 h-4 text-current" />
               {isSigningOut ? 'Signing Out...' : 'Sign Out'}
@@ -165,9 +165,9 @@ const DashboardLayout: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Topbar */}
-        <header className="flex h-16 items-center justify-between border-b border-default bg-background/80 px-4 backdrop-blur-sm lg:px-8">
+        <header className="flex h-16 items-center justify-between border-b border-default bg-background/90 px-4 backdrop-blur-sm lg:px-8">
           <button 
-            className={`${navCollapsed ? 'inline-flex' : 'lg:hidden'} rounded-lg border border-default bg-card/85 p-2 text-muted transition-all hover:-translate-y-0.5 hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70`}
+            className={`${navCollapsed ? 'inline-flex' : 'lg:hidden'} rounded-lg border border-default bg-card p-2 text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:hover:bg-white/10`}
             onClick={() => {
               if (navCollapsed) {
                 setBool(NAV_COLLAPSED_KEY, false);
@@ -190,7 +190,7 @@ const DashboardLayout: React.FC = () => {
                     setBool(CHAT_SIDEBAR_COLLAPSED_KEY, next);
                     setBool(CHAT_CONTEXT_COLLAPSED_KEY, next);
                   }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-default bg-card/85 px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-pink-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70"
+                  className="inline-flex items-center gap-2 rounded-lg border border-default bg-card px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:hover:bg-white/10"
                 >
                   <Columns2 className="w-4 h-4 text-current" />
                   {chatContextCollapsed ? 'Show Chat Panels' : 'Focus Chat'}
@@ -200,7 +200,7 @@ const DashboardLayout: React.FC = () => {
             <button
               onClick={handleLogoutClick}
               disabled={isSigningOut}
-              className="hidden items-center gap-2 rounded-lg border border-default bg-card/85 px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-pink-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70 sm:inline-flex"
+              className="hidden items-center gap-2 rounded-lg border border-default bg-card px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 sm:inline-flex dark:hover:bg-white/10"
             >
               <LogOut className="w-4 h-4 text-current" />
               {isSigningOut ? 'Signing Out...' : 'Sign Out'}
@@ -209,7 +209,7 @@ const DashboardLayout: React.FC = () => {
               <span className="text-sm font-medium text-primary">{displayName}</span>
               <span className="text-xs font-normal text-muted">{user?.email || ''}</span>
             </div>
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-fuchsia-200 bg-gradient-to-br from-pink-100 to-violet-100 text-primary shadow-sm">
+            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-indigo-100 bg-indigo-50 text-accent shadow-sm dark:border-indigo-400/20 dark:bg-indigo-400/10">
               <span className="text-sm font-semibold">{displayName?.[0]?.toUpperCase() ?? "U"}</span>
             </div>
           </div>
@@ -217,7 +217,7 @@ const DashboardLayout: React.FC = () => {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
-          <div className="max-w-6xl mx-auto h-full">
+          <div className="mx-auto h-full max-w-7xl">
             <Outlet />
           </div>
         </main>

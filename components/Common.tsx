@@ -13,19 +13,19 @@ export const Button: React.FC<
 > = ({ children, variant = "primary", icon: Icon, className = "", ...props }) => {
   const variants: Record<ButtonVariant, string> = {
     primary:
-      "border border-fuchsia-300 bg-gradient-to-r from-pink-400 via-fuchsia-500 to-violet-500 text-white shadow-[0_14px_32px_-18px_rgba(168,85,247,0.85)] hover:shadow-[0_18px_42px_-20px_rgba(168,85,247,0.95)]",
-    secondary: "bg-white/85 text-primary border border-fuchsia-100 hover:border-fuchsia-200 hover:bg-pink-50/70",
-    danger: "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100",
-    outline: "bg-white/80 text-primary border border-fuchsia-100 hover:border-fuchsia-200 hover:bg-violet-50/80",
-    ghost: "bg-transparent text-muted hover:bg-pink-50/80 hover:text-primary",
-    soft: "bg-gradient-to-r from-pink-50 to-violet-50 text-primary border border-fuchsia-100 hover:border-fuchsia-200",
+      "border border-[#8B5CF6] bg-[linear-gradient(135deg,#8B5CF6,#D97745)] text-white shadow-[0_14px_34px_-20px_rgba(139,92,246,0.72)] hover:border-[#7C3AED] hover:shadow-[0_18px_42px_-24px_rgba(217,119,69,0.72)]",
+    secondary: "bg-white text-primary border border-default hover:border-[#D7C6B8] hover:bg-[#FAF7F2] dark:bg-white/5 dark:hover:bg-white/10",
+    danger: "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:border-rose-400/20",
+    outline: "bg-white text-primary border border-default hover:border-[#D7C6B8] hover:bg-[#FAF7F2] dark:bg-white/5 dark:hover:bg-white/10",
+    ghost: "bg-transparent text-muted hover:bg-[#F3ECE3] hover:text-primary dark:hover:bg-white/10",
+    soft: "bg-[#F3ECE3] text-primary border border-[#E8DED4] hover:border-[#D7C6B8] hover:bg-[#EFE6DB] dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15",
   };
 
   return (
     <button
       className={cx(
         "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-200/70",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
         "disabled:pointer-events-none disabled:opacity-50",
         "hover:-translate-y-0.5 active:translate-y-px",
         variants[variant],
@@ -46,9 +46,9 @@ export const Card: React.FC<{
 }> = ({ children, className = "", interactive = false }) => (
   <div
     className={cx(
-      "rounded-2xl border border-default bg-card/90 shadow-[0_16px_42px_-34px_var(--shadow)] backdrop-blur-sm",
-      "dark:border-white/10 dark:shadow-none",
-      interactive && "transition-all hover:-translate-y-0.5 hover:border-fuchsia-200 hover:shadow-[0_20px_52px_-34px_rgba(168,85,247,0.35)]",
+      "rounded-2xl border border-default bg-card shadow-[0_14px_38px_-32px_var(--shadow)]",
+      "dark:border-white/10",
+      interactive && "transition-all hover:-translate-y-0.5 hover:border-[#D7C6B8] hover:shadow-[0_20px_46px_-34px_rgba(91,64,43,0.28)] dark:hover:border-white/20",
       className,
     )}
   >
@@ -66,8 +66,8 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     {label && <label className="ml-1 text-sm font-semibold text-primary">{label}</label>}
     <input
       className={cx(
-        "w-full rounded-xl border border-default bg-white/85 px-3.5 py-2.5 text-sm font-medium text-primary outline-none transition placeholder:text-muted",
-        "focus:border-fuchsia-300 focus:bg-white focus:shadow-[0_0_0_4px_rgba(244,114,182,0.14)] focus-visible:outline-none",
+        "w-full rounded-xl border border-default bg-white px-3.5 py-2.5 text-sm font-medium text-primary outline-none transition placeholder:text-muted",
+        "focus:border-[#C7A5F7] focus:bg-white focus:shadow-[0_0_0_4px_rgba(139,92,246,0.13)] focus-visible:outline-none",
         "dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10",
         className,
       )}
@@ -82,12 +82,12 @@ export const Badge: React.FC<{
   color?: "green" | "blue" | "red" | "gray" | "purple" | "orange";
 }> = ({ children, color = "gray" }) => {
   const colors = {
-    green: "bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-400/15 dark:text-emerald-200",
-    blue: "bg-sky-50 text-sky-700 border border-sky-100 dark:bg-sky-400/15 dark:text-sky-200",
-    purple: "bg-violet-50 text-violet-700 border border-violet-100 dark:bg-violet-400/15 dark:text-violet-200",
-    orange: "bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-400/15 dark:text-amber-200",
+    green: "bg-[#EEF4ED] text-[#557761] border border-[#D7E4D8] dark:bg-emerald-400/15 dark:text-emerald-200",
+    blue: "bg-[#F2ECFF] text-[#6D4BC7] border border-[#E3D7FB] dark:bg-violet-400/15 dark:text-violet-200",
+    purple: "bg-[#F2ECFF] text-[#6D4BC7] border border-[#E3D7FB] dark:bg-violet-400/15 dark:text-violet-200",
+    orange: "bg-[#FFF1E8] text-[#A6532E] border border-[#F4D7C6] dark:bg-amber-400/15 dark:text-amber-200",
     red: "bg-rose-50 text-rose-700 border border-rose-100 dark:bg-rose-400/15 dark:text-rose-200",
-    gray: "bg-pink-50/70 text-muted border border-fuchsia-100",
+    gray: "bg-[#FAF7F2] text-muted border border-[#E8DED4] dark:bg-white/10 dark:border-white/10",
   };
   return (
     <span className={cx("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium", colors[color])}>
@@ -107,8 +107,8 @@ export const PageHeader: React.FC<{
     {breadcrumbs && breadcrumbs.length > 0 && <Breadcrumbs items={breadcrumbs} />}
   <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
     <div className="max-w-2xl">
-      {eyebrow && <p className="mb-2 text-sm font-medium text-fuchsia-700">{eyebrow}</p>}
-      <h1 className="bg-gradient-to-r from-primary via-fuchsia-700 to-violet-700 bg-clip-text text-[2.5rem] font-semibold tracking-tight text-transparent md:text-5xl">{title}</h1>
+      {eyebrow && <p className="mb-2 text-sm font-medium text-accent">{eyebrow}</p>}
+      <h1 className="text-[2.25rem] font-semibold tracking-tight text-primary md:text-5xl">{title}</h1>
       {description && <p className="mt-3 text-base font-normal leading-7 text-muted">{description}</p>}
     </div>
     {action && <div className="shrink-0">{action}</div>}
@@ -141,10 +141,10 @@ export const StatCard: React.FC<{
   accent?: "purple" | "blue" | "green" | "orange";
 }> = ({ title, value, detail, icon: Icon, accent = "purple" }) => {
   const accents = {
-    purple: "bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200",
-    blue: "bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200",
-    green: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200",
-    orange: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200",
+    purple: "bg-[#F2ECFF] text-[#6D4BC7] dark:bg-violet-400/15 dark:text-violet-200",
+    blue: "bg-[#EEF4ED] text-[#557761] dark:bg-emerald-400/15 dark:text-emerald-200",
+    green: "bg-[#EEF4ED] text-[#557761] dark:bg-emerald-400/15 dark:text-emerald-200",
+    orange: "bg-[#FFF1E8] text-[#A6532E] dark:bg-amber-400/15 dark:text-amber-200",
   };
   return (
     <Card className="p-5">
@@ -171,7 +171,7 @@ export const EmptyState: React.FC<{
 }> = ({ title, description, action, icon: Icon = Sparkles, embedded = false }) => {
   const content = (
     <div className={cx("text-center", embedded ? "p-6" : "")}>
-    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-fuchsia-100 bg-gradient-to-br from-pink-50 to-violet-50 text-accent">
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-[#E3D7FB] bg-[#F2ECFF] text-accent dark:border-violet-400/20 dark:bg-violet-400/10">
       <Icon className="h-6 w-6" />
     </div>
     <h3 className="mt-5 text-xl font-semibold text-primary">{title}</h3>
@@ -183,7 +183,7 @@ export const EmptyState: React.FC<{
 };
 
 export const LoadingState: React.FC<{ label?: string }> = ({ label = "Loading" }) => (
-  <div className="flex items-center justify-center gap-3 rounded-2xl border border-default bg-card/90 p-8 text-sm font-medium text-muted shadow-[0_16px_42px_-34px_var(--shadow)] backdrop-blur-sm">
+  <div className="flex items-center justify-center gap-3 rounded-2xl border border-default bg-card p-8 text-sm font-medium text-muted shadow-[0_14px_38px_-32px_var(--shadow)]">
     <Loader2 className="h-5 w-5 animate-spin text-accent" />
     {label}
   </div>
@@ -246,7 +246,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-xl border border-default bg-white/85 p-1" role="group" aria-label={ariaLabel}>
+    <div className="flex flex-wrap gap-1 rounded-xl border border-default bg-white p-1 dark:bg-white/5" role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -255,7 +255,7 @@ export function SegmentedControl<T extends string>({
           onClick={() => onChange(option.value)}
           className={cx(
             "rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-            value === option.value ? "bg-gradient-to-r from-pink-50 to-violet-50 text-primary shadow-sm" : "bg-transparent text-muted hover:text-primary",
+            value === option.value ? "bg-[#F3ECE3] text-primary shadow-sm dark:bg-white/10" : "bg-transparent text-muted hover:bg-[#FAF7F2] hover:text-primary dark:hover:bg-white/10",
           )}
         >
           {option.label}
