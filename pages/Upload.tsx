@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { BookOpen, CheckCircle2, FileText, FileUp, Globe, Layers3, Link as LinkIcon, Loader2, MessageSquare, Sparkles, Target, UploadCloud } from "lucide-react";
+import { BookOpen, CheckCircle2, FileText, FileUp, Globe, Layers3, Loader2, MessageSquare, Sparkles, Target, UploadCloud } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppRoute } from "../types";
 import { Badge, Button, Card, EmptyState, ErrorState, Input, PageHeader } from "../components/Common";
@@ -163,115 +163,164 @@ const Upload: React.FC = () => {
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-12 pb-16">
       <PageHeader
-        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Upload" }]}
-        title="Build your knowledge base"
-        description="Add material and LearnBot prepares it for chat, quizzes, and memory review."
+        breadcrumbs={[{ label: "Study desk", href: "/app/dashboard" }, { label: "Upload" }]}
+        title="Add material to your desk."
+        description="Upload one source and LearnBot turns it into grounded answers, quiz practice, and memory review."
       />
 
-      <div className="flex flex-wrap gap-2">
-        <Button variant={activeTab === "pdf" ? "primary" : "soft"} icon={FileUp} onClick={() => setActiveTab("pdf")}>Files</Button>
-        <Button variant={activeTab === "url" ? "primary" : "soft"} icon={LinkIcon} onClick={() => setActiveTab("url")}>URL</Button>
-      </div>
+      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.1fr)_420px]">
+        <Card className="relative overflow-hidden bg-[#FFF6B8] p-6 md:p-9">
+          <div className="pointer-events-none absolute right-10 top-8 grid grid-cols-3 gap-2 opacity-80" aria-hidden="true">
+            {Array.from({ length: 9 }).map((_, index) => <span key={index} className="h-2.5 w-2.5 rounded-full bg-[#050505]" />)}
+          </div>
 
-      <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <Card className="p-8">
-          {activeTab === "pdf" ? (
-            <div className="space-y-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
-                <UploadCloud className="h-6 w-6" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-semibold text-primary">Upload documents</h2>
-                <p className="mt-2 text-sm leading-6 text-muted">Drop in PDFs and LearnBot will prepare a grounded study workspace.</p>
-              </div>
-              <input id="file-upload" type="file" multiple accept=".pdf" onChange={handleFileChange} className="hidden" />
-              <label htmlFor="file-upload" className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-indigo-600 bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_28px_-18px_rgba(79,70,229,0.85)] transition-all hover:-translate-y-0.5 hover:bg-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/15">
-                {isIngesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileUp className="h-4 w-4" />}
-                Choose files
+          <div className="relative max-w-3xl">
+            <div className="mb-7 inline-flex rounded-full border border-[#D9D1B8] bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setActiveTab("pdf")}
+                className={`rounded-full px-5 py-2 text-sm font-bold transition ${activeTab === "pdf" ? "bg-[#050505] text-white" : "text-primary hover:bg-[#050505]/[0.04]"}`}
+              >
+                PDF
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("url")}
+                className={`rounded-full px-5 py-2 text-sm font-bold transition ${activeTab === "url" ? "bg-[#050505] text-white" : "text-primary hover:bg-[#050505]/[0.04]"}`}
+              >
+                URL
+              </button>
+            </div>
+
+            <input id="file-upload" type="file" multiple accept=".pdf" onChange={handleFileChange} className="hidden" />
+            {activeTab === "pdf" ? (
+              <label
+                htmlFor="file-upload"
+                className="group flex min-h-[25rem] cursor-pointer flex-col justify-between rounded-[32px] border border-dashed border-[#E6D979] bg-white p-8 transition hover:-translate-y-1 hover:border-[#8F806F]"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#AFC7ED] bg-[#DCEBFF]">
+                    {isIngesting ? <Loader2 className="h-6 w-6 animate-spin" /> : <UploadCloud className="h-6 w-6" />}
+                  </div>
+                  <span className="rounded-full border border-[#D9D1B8] bg-[#FFF6B8] px-4 py-2 text-xs font-bold text-[#3F3F3A]">
+                    PDF, lecture slides, reading notes
+                  </span>
+                </div>
+                <div>
+                  <h2 className="max-w-xl text-5xl font-black tracking-[-0.04em] text-primary md:text-6xl">Drop your source here.</h2>
+                <p className="mt-5 max-w-lg text-lg font-medium leading-8 text-[#3F3F3A]">
+                    LearnBot extracts the text, finds the important concepts, and prepares study tools from the exact material you upload.
+                  </p>
+                </div>
+                <div>
+                  <span className="inline-flex rounded-full bg-[#050505] px-6 py-3 text-sm font-bold text-white transition group-hover:scale-[1.02]">
+                    Choose files
+                  </span>
+                </div>
               </label>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-teal-100 bg-teal-50 text-secondary dark:border-teal-400/20 dark:bg-teal-400/10">
-                <Globe className="h-6 w-6" />
+            ) : (
+              <div className="min-h-[25rem] rounded-[32px] border border-[#D9D1B8] bg-white p-8">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#AFC7ED] bg-[#DCEBFF]">
+                  <Globe className="h-6 w-6" />
+                </div>
+                <h2 className="mt-12 max-w-xl text-5xl font-black tracking-[-0.04em] text-primary md:text-6xl">Bring in a web reading.</h2>
+                <p className="mt-5 max-w-lg text-lg font-medium leading-8 text-[#3F3F3A]">Paste a trusted article or documentation page and keep it connected to your study workflow.</p>
+                <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                  <Input placeholder="https://example.com/article" value={url} onChange={(event) => setUrl(event.target.value)} />
+                  <Button onClick={handleUrlIngest} disabled={isIngesting || !url.trim()} icon={isIngesting ? Loader2 : Sparkles}>Sync</Button>
+                </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-semibold text-primary">Sync a web source</h2>
-                <p className="mt-2 text-sm leading-6 text-muted">Paste a trusted article, documentation page, or research URL.</p>
-              </div>
-              <Input placeholder="https://example.com/article" value={url} onChange={(e) => setUrl(e.target.value)} />
-              <Button onClick={handleUrlIngest} disabled={isIngesting || !url.trim()} icon={isIngesting ? Loader2 : Sparkles}>Sync source</Button>
-            </div>
-          )}
+            )}
+          </div>
 
           {status === "success" && (
-            <div className="mt-6 flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+            <div className="relative mt-6 flex items-center gap-3 rounded-[24px] border border-[#BFD0C0] bg-[#EEF4ED] p-4 text-sm font-bold text-primary">
               <CheckCircle2 className="h-5 w-5" />
               Source saved and ready for study.
             </div>
           )}
-          {error && <div className="mt-4"><ErrorState title="Ingestion notice" message={error} embedded /></div>}
-          {isIngesting && (
-            <div className="mt-6 rounded-2xl border border-default bg-white p-4 dark:bg-white/5">
-              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-primary">
-                <Loader2 className="h-4 w-4 animate-spin text-accent" />
-                Preparing source
-              </div>
-              <div className="space-y-3">
-                {processingSteps.map((step, index) => (
-                  <div key={step} className="flex items-center gap-3 text-sm">
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${index === 0 ? "border-indigo-200 bg-indigo-50 text-accent" : "border-default bg-white text-muted dark:bg-white/5"}`}>
-                      {index + 1}
-                    </span>
-                    <span className={index === 0 ? "font-medium text-primary" : "text-muted"}>{step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          {error && <div className="relative mt-4"><ErrorState title="Upload note" message={error} embedded /></div>}
         </Card>
 
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-primary">Recent sources</h2>
-          {data.sources.length === 0 ? (
-            <EmptyState title="No sources yet" description="Upload a document to unlock chat, quizzes, and flashcards." action={<Button icon={FileUp} onClick={() => document.getElementById("file-upload")?.click()}>Choose file</Button>} />
-          ) : (
-            data.sources.slice(0, 5).map((source) => {
-              const isReady = source.status === "ready" && (source.chunkCount ?? 0) > 0;
+        <Card className="bg-white p-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#050505] text-white">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-black tracking-[-0.02em] text-primary">Processing path</h2>
+              <p className="text-sm font-medium text-[#3F3F3A]">From source to study desk.</p>
+            </div>
+          </div>
+          <div className="mt-8 space-y-4">
+            {processingSteps.map((step, index) => {
+              const active = isIngesting && index === 0;
+              const complete = status === "success";
               return (
-                <Card key={source.id} className="p-5" interactive>
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="flex min-w-0 gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
+                <div key={step} className="flex gap-4 rounded-[22px] border border-[#D9D1B8] bg-white p-4">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#D9D1B8] text-xs font-black ${complete ? "bg-[#EEF4ED]" : active ? "bg-[#050505] text-white" : "bg-[#FFF6B8]"}`}>
+                    {complete ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <div>
+                    <p className="font-bold text-primary">{step}</p>
+                    <p className="mt-1 text-sm font-medium text-[#3F3F3A]">
+                      {index === 0 ? "Readable text becomes study sections." : index === 1 ? "Important terms become context." : index === 2 ? "Quiz and recall paths are prepared." : "You can study with context."}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </section>
+
+      <section className="space-y-5">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-black tracking-[-0.03em] text-primary">Recent materials</h2>
+            <p className="mt-2 text-sm font-medium text-[#3F3F3A]">Your newest sources, ready to become answers, quizzes, and flashcards.</p>
+          </div>
+          <Link to={AppRoute.SOURCES}><Button variant="outline">View all</Button></Link>
+        </div>
+
+        {data.sources.length === 0 ? (
+          <EmptyState title="No sources yet" description="Upload a document to unlock grounded chat, quizzes, and flashcards." action={<Button icon={FileUp} onClick={() => document.getElementById("file-upload")?.click()}>Choose file</Button>} />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data.sources.slice(0, 6).map((source) => {
+              const isReady = source.status === "ready" && (source.chunkCount ?? 0) > 0;
+              const concepts = (source.keyConcepts ?? ["Summary", "Practice", "Memory"]).slice(0, 3);
+              return (
+                <Card key={source.id} className="flex min-h-[18rem] flex-col justify-between bg-white p-5" interactive>
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#AFC7ED] bg-[#DCEBFF]">
                         {source.type === "url" ? <Globe className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="truncate font-semibold text-primary">{source.name}</h3>
-                        <p className="mt-1 text-sm text-muted">
-                          {source.status === "failed" ? source.processingError ?? "Processing failed." : isReady ? "Ready for study tools." : "Preparing study tools."}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {(source.keyConcepts ?? ["Summary", "Practice", "Memory"]).slice(0, 3).map((concept) => <Badge key={concept} color="gray">{concept}</Badge>)}
-                        </div>
-                        {source.chunkCount !== undefined && <p className="mt-3 text-xs text-muted">{source.chunkCount} study sections</p>}
-                      </div>
+                      <Badge color={source.status === "ready" ? "green" : source.status === "failed" ? "red" : "orange"}>{source.status}</Badge>
                     </div>
-                    <Badge color={source.status === "ready" ? "green" : source.status === "failed" ? "red" : "orange"}>{source.status}</Badge>
+                    <h3 className="mt-6 line-clamp-2 text-2xl font-black tracking-[-0.03em] text-primary">{source.name}</h3>
+                    <p className="mt-3 text-sm font-medium leading-6 text-[#3F3F3A]">
+                      {source.status === "failed" ? source.processingError ?? "Processing failed." : isReady ? "Ready for grounded study." : "Preparing study tools."}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {concepts.map((concept) => <Badge key={concept} color="gray">{concept}</Badge>)}
+                    </div>
                   </div>
-                  <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="mt-6 flex flex-wrap gap-2">
                     <Link to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}><Button icon={BookOpen} disabled={!isReady}>Study</Button></Link>
                     <Button variant="outline" icon={Target} disabled={!isReady || busyAction === `quiz-${source.id}`} onClick={() => handleGenerateQuiz(source)}>Quiz</Button>
-                    <Button variant="outline" icon={Layers3} disabled={!isReady || busyAction === `deck-${source.id}`} onClick={() => handleGenerateDeck(source)}>Flashcards</Button>
-                    <Link to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}><Button variant="ghost" icon={MessageSquare}>Ask AI</Button></Link>
+                    <Button variant="outline" icon={Layers3} disabled={!isReady || busyAction === `deck-${source.id}`} onClick={() => handleGenerateDeck(source)}>Cards</Button>
+                    <Link to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}><Button variant="ghost" icon={MessageSquare}>Ask</Button></Link>
                   </div>
                 </Card>
               );
-            })
-          )}
-        </div>
-      </div>
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

@@ -51,7 +51,7 @@ type LearningDataValue = LearningState & {
   addGeneratedDeck: (deck: FlashcardDeck, cards: Flashcard[]) => void;
   reviewFlashcard: (flashcardId: string, rating: FlashcardReviewRating) => void;
   saveQuizAttempt: (quizId: string, answers: Record<string, number>, questions: QuizQuestion[]) => QuizAttempt;
-  createChatSession: (sourceIds?: string[]) => ChatSession;
+  createChatSession: (sourceIds?: string[], options?: { forceNew?: boolean }) => ChatSession;
   addChatMessage: (sessionId: string, message: Omit<ChatMessage, "id" | "timestamp">) => ChatMessage;
   saveMessageAsNote: (sessionId: string, messageId: string) => void;
   createFlashcardsFromMessage: (sessionId: string, messageId: string) => void;
@@ -73,6 +73,42 @@ function withOwner<T extends { ownerId?: string }>(item: T, ownerId: string): T 
   return { ...item, ownerId };
 }
 
+const uniqueIds = (ids: string[] = []) => [...new Set(ids.filter(Boolean))];
+
+const sameIdSet = (left: string[], right: string[]) => {
+  const leftIds = uniqueIds(left);
+  const rightIds = uniqueIds(right);
+  return leftIds.length === rightIds.length && leftIds.every((id) => rightIds.includes(id));
+};
+
+function buildChatSession(ownerId: string, sourceIds: string[], title = "New study chat"): ChatSession {
+  return {
+    id: newId("chat"),
+    ownerId,
+    title,
+    sourceIds: uniqueIds(sourceIds),
+    messages: [],
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
+}
+
+function chatSessionReferencesSource(session: ChatSession, sourceId: string): boolean {
+  return session.sourceIds.includes(sourceId) || session.messages.some((message) => message.sourceIds?.includes(sourceId));
+}
+
+function replaceChatSourceId(sessions: ChatSession[], fromId: string, toId: string): ChatSession[] {
+  if (!fromId || fromId === toId) return sessions;
+  return sessions.map((session) => ({
+    ...session,
+    sourceIds: uniqueIds(session.sourceIds.map((id) => (id === fromId ? toId : id))),
+    messages: session.messages.map((message) => ({
+      ...message,
+      sourceIds: message.sourceIds ? uniqueIds(message.sourceIds.map((id) => (id === fromId ? toId : id))) : message.sourceIds,
+    })),
+  }));
+}
+
 function removeSourceReferences(state: LearningState, sourceId: string): LearningState {
   const removedDeckIds = new Set(state.flashcardDecks.filter((deck) => deck.sourceId === sourceId).map((deck) => deck.id));
   const removedCardIds = new Set(
@@ -89,14 +125,7 @@ function removeSourceReferences(state: LearningState, sourceId: string): Learnin
     flashcardDecks: state.flashcardDecks.filter((deck) => deck.sourceId !== sourceId),
     flashcards: state.flashcards.filter((card) => !removedCardIds.has(card.id)),
     flashcardReviews: state.flashcardReviews.filter((review) => !removedCardIds.has(review.flashcardId)),
-    chatSessions: state.chatSessions.map((session) => ({
-      ...session,
-      sourceIds: session.sourceIds.filter((id) => id !== sourceId),
-      messages: session.messages.map((message) => ({
-        ...message,
-        sourceIds: message.sourceIds?.filter((id) => id !== sourceId),
-      })),
-    })),
+    chatSessions: state.chatSessions.filter((session) => !chatSessionReferencesSource(session, sourceId)),
   };
 }
 
@@ -145,6 +174,24 @@ function sanitizeOwnedState(state: LearningState, ownerId: string): LearningStat
   const deckIds = new Set(flashcardDecks.map((deck) => deck.id));
   const flashcards = state.flashcards.filter((card) => belongsToOwner(card, ownerId) && (!card.sourceId || sourceIds.has(card.sourceId)) && (!card.deckId || deckIds.has(card.deckId)));
   const cardIds = new Set(flashcards.map((card) => card.id));
+  const chatSessions = state.chatSessions
+    .filter((session) => belongsToOwner(session, ownerId))
+    .map((session) => {
+      const sessionSourceIds = uniqueIds([
+        ...session.sourceIds,
+        ...session.messages.flatMap((message) => message.sourceIds ?? []),
+      ]).filter((id) => sourceIds.has(id));
+      const messages = session.messages
+        .filter((message) => !message.ownerId || message.ownerId === ownerId)
+        .map((message) => {
+          const messageSourceIds = uniqueIds(message.sourceIds ?? sessionSourceIds).filter((id) => sourceIds.has(id));
+          return { ...message, sourceIds: messageSourceIds };
+        })
+        .filter((message) => (message.sourceIds?.length ?? 0) > 0);
+
+      return { ...session, sourceIds: sessionSourceIds, messages };
+    })
+    .filter((session) => session.sourceIds.length > 0);
 
   return {
     ...state,
@@ -157,16 +204,7 @@ function sanitizeOwnedState(state: LearningState, ownerId: string): LearningStat
     flashcardDecks,
     flashcards,
     flashcardReviews: state.flashcardReviews.filter((review) => belongsToOwner(review, ownerId) && cardIds.has(review.flashcardId)),
-    chatSessions: state.chatSessions
-      .filter((session) => belongsToOwner(session, ownerId))
-      .map((session) => ({
-        ...session,
-        sourceIds: session.sourceIds.filter((id) => sourceIds.has(id)),
-        messages: session.messages.map((message) => ({
-          ...message,
-          sourceIds: message.sourceIds?.filter((id) => sourceIds.has(id)),
-        })),
-      })),
+    chatSessions,
     studyGoals: state.studyGoals.filter((goal) => belongsToOwner(goal, ownerId)),
   };
 }
@@ -300,10 +338,24 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const upsertSource = (source: Source, replaceId?: string) => {
       setState((prev) => {
-        const withoutReplacement = prev.sources.filter((item) => item.id !== source.id && item.id !== replaceId);
+        const ownedSource = withOwner(source, ownerId);
+        const withoutReplacement = prev.sources.filter((item) => item.id !== ownedSource.id && item.id !== replaceId);
+        const remappedSessions = replaceId ? replaceChatSourceId(prev.chatSessions, replaceId, ownedSource.id) : prev.chatSessions;
+        const sourceChatReady =
+          ownedSource.status === "ready" && (ownedSource.chunkCount ?? 0) > 0 && (ownedSource.extractedTextLength ?? 1) > 0;
+        const hasSourceChat = remappedSessions.some((session) => sameIdSet(session.sourceIds, [ownedSource.id]));
+        const chatSessions =
+          sourceChatReady && !hasSourceChat
+            ? [
+                buildChatSession(ownerId, [ownedSource.id], `${ownedSource.name} study chat`),
+                ...remappedSessions,
+              ]
+            : remappedSessions;
+
         return {
           ...prev,
-          sources: [source, ...withoutReplacement],
+          sources: [ownedSource, ...withoutReplacement],
+          chatSessions,
         };
       });
     };
@@ -380,16 +432,19 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
       return attempt;
     };
 
-    const createChatSession = (sourceIds: string[] = []) => {
-      const session: ChatSession = {
-        id: newId("chat"),
-        ownerId,
-        title: "New study chat",
-        sourceIds,
-        messages: [],
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-      };
+    const createChatSession = (sourceIds: string[] = [], options?: { forceNew?: boolean }) => {
+      const validSourceIds = uniqueIds(sourceIds).filter((sourceId) =>
+        state.sources.some((source) => source.id === sourceId),
+      );
+      if (validSourceIds.length > 0 && !options?.forceNew) {
+        const existing = state.chatSessions.find((session) => sameIdSet(session.sourceIds, validSourceIds));
+        if (existing) return existing;
+      }
+
+      const sourceName = validSourceIds.length === 1
+        ? state.sources.find((source) => source.id === validSourceIds[0])?.name
+        : undefined;
+      const session = buildChatSession(ownerId, validSourceIds, sourceName ? `${sourceName} study chat` : "New study chat");
       setState((prev) => ({ ...prev, chatSessions: [session, ...prev.chatSessions] }));
       return session;
     };
@@ -402,6 +457,7 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
           session.id === sessionId
             ? {
                 ...session,
+                sourceIds: uniqueIds([...session.sourceIds, ...(message.sourceIds ?? [])]),
                 title: session.messages.length === 0 && message.role === "user" ? message.content.slice(0, 48) : session.title,
                 messages: [...session.messages, nextMessage],
                 updatedAt: nowIso(),

@@ -13,20 +13,20 @@ export const Button: React.FC<
 > = ({ children, variant = "primary", icon: Icon, className = "", ...props }) => {
   const variants: Record<ButtonVariant, string> = {
     primary:
-      "border border-[#8B5CF6] bg-[linear-gradient(135deg,#8B5CF6,#D97745)] text-white shadow-[0_14px_34px_-20px_rgba(139,92,246,0.72)] hover:border-[#7C3AED] hover:shadow-[0_18px_42px_-24px_rgba(217,119,69,0.72)]",
-    secondary: "bg-white text-primary border border-default hover:border-[#D7C6B8] hover:bg-[#FAF7F2] dark:bg-white/5 dark:hover:bg-white/10",
+      "border border-[#050505] bg-[#050505] text-white shadow-[0_14px_30px_rgba(40,32,20,0.10)] hover:bg-[#1b1b1b]",
+    secondary: "border border-[#D9D1B8] bg-white text-primary hover:border-[#E6D979] hover:bg-[#FFF6B8] dark:bg-white/5 dark:hover:bg-white/10",
     danger: "bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 dark:bg-rose-400/10 dark:text-rose-200 dark:border-rose-400/20",
-    outline: "bg-white text-primary border border-default hover:border-[#D7C6B8] hover:bg-[#FAF7F2] dark:bg-white/5 dark:hover:bg-white/10",
-    ghost: "bg-transparent text-muted hover:bg-[#F3ECE3] hover:text-primary dark:hover:bg-white/10",
-    soft: "bg-[#F3ECE3] text-primary border border-[#E8DED4] hover:border-[#D7C6B8] hover:bg-[#EFE6DB] dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15",
+    outline: "border border-[#D9D1B8] bg-white text-primary hover:border-[#E6D979] hover:bg-[#FFF6B8] dark:bg-white/5 dark:hover:bg-white/10",
+    ghost: "bg-transparent text-[#3F3F3A] hover:bg-white hover:text-primary dark:hover:bg-white/10",
+    soft: "border border-[#D6C8FF] bg-[#EFE7FF] text-primary hover:border-[#AFC7ED] hover:bg-[#DCEBFF] dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15",
   };
 
   return (
     <button
       className={cx(
-        "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex min-h-11 items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10",
+        "disabled:pointer-events-none disabled:border-[#A7A29A] disabled:bg-[#A7A29A] disabled:text-white disabled:opacity-100",
         "hover:-translate-y-0.5 active:translate-y-px",
         variants[variant],
         className,
@@ -46,9 +46,9 @@ export const Card: React.FC<{
 }> = ({ children, className = "", interactive = false }) => (
   <div
     className={cx(
-      "rounded-2xl border border-default bg-card shadow-[0_14px_38px_-32px_var(--shadow)]",
+      "rounded-[28px] border border-[#D9D1B8] bg-white shadow-[0_18px_50px_rgba(40,32,20,0.08)]",
       "dark:border-white/10",
-      interactive && "transition-all hover:-translate-y-0.5 hover:border-[#D7C6B8] hover:shadow-[0_20px_46px_-34px_rgba(91,64,43,0.28)] dark:hover:border-white/20",
+      interactive && "transition-all hover:-translate-y-1 hover:border-[#E6D979] hover:shadow-[0_22px_58px_rgba(40,32,20,0.11)] dark:hover:border-white/20",
       className,
     )}
   >
@@ -66,8 +66,8 @@ export const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { lab
     {label && <label className="ml-1 text-sm font-semibold text-primary">{label}</label>}
     <input
       className={cx(
-        "w-full rounded-xl border border-default bg-white px-3.5 py-2.5 text-sm font-medium text-primary outline-none transition placeholder:text-muted",
-        "focus:border-[#C7A5F7] focus:bg-white focus:shadow-[0_0_0_4px_rgba(139,92,246,0.13)] focus-visible:outline-none",
+        "h-[52px] w-full rounded-full border border-[#D9D1B8] bg-white px-5 text-sm font-medium text-primary outline-none transition placeholder:text-[#6B675F]",
+        "focus:border-[#E6D979] focus:bg-white focus:shadow-[0_0_0_4px_rgba(191,175,155,0.22)] focus-visible:outline-none",
         "dark:border-white/10 dark:bg-white/5 dark:focus:bg-white/10",
         className,
       )}
@@ -82,12 +82,12 @@ export const Badge: React.FC<{
   color?: "green" | "blue" | "red" | "gray" | "purple" | "orange";
 }> = ({ children, color = "gray" }) => {
   const colors = {
-    green: "bg-[#EEF4ED] text-[#557761] border border-[#D7E4D8] dark:bg-emerald-400/15 dark:text-emerald-200",
-    blue: "bg-[#F2ECFF] text-[#6D4BC7] border border-[#E3D7FB] dark:bg-violet-400/15 dark:text-violet-200",
-    purple: "bg-[#F2ECFF] text-[#6D4BC7] border border-[#E3D7FB] dark:bg-violet-400/15 dark:text-violet-200",
-    orange: "bg-[#FFF1E8] text-[#A6532E] border border-[#F4D7C6] dark:bg-amber-400/15 dark:text-amber-200",
+    green: "bg-[#EEF4ED] text-[#3F6449] border border-[#BFD0C0] dark:bg-emerald-400/15 dark:text-emerald-200",
+    blue: "bg-[#DCEBFF] text-[#263D5E] border border-[#AFC7ED] dark:bg-violet-400/15 dark:text-violet-200",
+    purple: "bg-[#EFE7FF] text-[#4E3D78] border border-[#D6C8FF] dark:bg-violet-400/15 dark:text-violet-200",
+    orange: "bg-[#FFF6B8] text-[#6B4E19] border border-[#D9D1B8] dark:bg-amber-400/15 dark:text-amber-200",
     red: "bg-rose-50 text-rose-700 border border-rose-100 dark:bg-rose-400/15 dark:text-rose-200",
-    gray: "bg-[#FAF7F2] text-muted border border-[#E8DED4] dark:bg-white/10 dark:border-white/10",
+    gray: "bg-white text-[#3F3F3A] border border-[#D9D1B8] dark:bg-white/10 dark:border-white/10",
   };
   return (
     <span className={cx("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium", colors[color])}>
@@ -108,8 +108,8 @@ export const PageHeader: React.FC<{
   <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
     <div className="max-w-2xl">
       {eyebrow && <p className="mb-2 text-sm font-medium text-accent">{eyebrow}</p>}
-      <h1 className="text-[2.25rem] font-semibold tracking-tight text-primary md:text-5xl">{title}</h1>
-      {description && <p className="mt-3 text-base font-normal leading-7 text-muted">{description}</p>}
+      <h1 className="text-[2.4rem] font-black tracking-[-0.03em] text-primary md:text-[4rem] md:leading-[0.95]">{title}</h1>
+      {description && <p className="mt-4 max-w-xl text-base font-medium leading-7 text-muted">{description}</p>}
     </div>
     {action && <div className="shrink-0">{action}</div>}
   </div>
@@ -171,7 +171,7 @@ export const EmptyState: React.FC<{
 }> = ({ title, description, action, icon: Icon = Sparkles, embedded = false }) => {
   const content = (
     <div className={cx("text-center", embedded ? "p-6" : "")}>
-    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-[#E3D7FB] bg-[#F2ECFF] text-accent dark:border-violet-400/20 dark:bg-violet-400/10">
+    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-[#D6C8FF] bg-[#EFE7FF] text-primary dark:border-violet-400/20 dark:bg-violet-400/10">
       <Icon className="h-6 w-6" />
     </div>
     <h3 className="mt-5 text-xl font-semibold text-primary">{title}</h3>
@@ -179,12 +179,12 @@ export const EmptyState: React.FC<{
     {action && <div className="mt-6">{action}</div>}
     </div>
   );
-  return embedded ? content : <Card className="p-10 text-center">{content}</Card>;
+  return embedded ? content : <Card className="border-[#D9D1B8] bg-white p-10 text-center">{content}</Card>;
 };
 
 export const LoadingState: React.FC<{ label?: string }> = ({ label = "Loading" }) => (
-  <div className="flex items-center justify-center gap-3 rounded-2xl border border-default bg-card p-8 text-sm font-medium text-muted shadow-[0_14px_38px_-32px_var(--shadow)]">
-    <Loader2 className="h-5 w-5 animate-spin text-accent" />
+  <div className="flex items-center justify-center gap-3 rounded-2xl border border-[#D9D1B8] bg-white p-8 text-sm font-medium text-[#3F3F3A] shadow-[0_18px_50px_rgba(40,32,20,0.08)]">
+    <Loader2 className="h-5 w-5 animate-spin text-primary" />
     {label}
   </div>
 );
@@ -223,7 +223,7 @@ export const SkeletonBlock: React.FC<{ className?: string; lines?: number }> = (
         <div
           key={index}
           className={cx(
-            "h-3 rounded-full bg-surface2",
+            "h-3 rounded-full bg-[#FFF6B8]",
             index === 0 && "w-2/3",
             index === 1 && "w-full",
             index > 1 && "w-5/6",
@@ -246,7 +246,7 @@ export function SegmentedControl<T extends string>({
   ariaLabel: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-1 rounded-xl border border-default bg-white p-1 dark:bg-white/5" role="group" aria-label={ariaLabel}>
+    <div className="flex flex-wrap gap-1 rounded-xl border border-[#D9D1B8] bg-white p-1 dark:bg-white/5" role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.value}
@@ -254,8 +254,8 @@ export function SegmentedControl<T extends string>({
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}
           className={cx(
-            "rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15",
-            value === option.value ? "bg-[#F3ECE3] text-primary shadow-sm dark:bg-white/10" : "bg-transparent text-muted hover:bg-[#FAF7F2] hover:text-primary dark:hover:bg-white/10",
+            "rounded-lg px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10",
+            value === option.value ? "border border-[#AFC7ED] bg-[#DCEBFF] text-primary shadow-sm dark:bg-white/10" : "bg-transparent text-[#3F3F3A] hover:bg-[#FFF6B8] hover:text-primary dark:hover:bg-white/10",
           )}
         >
           {option.label}

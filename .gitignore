@@ -48,3 +48,21 @@ __pycache__/
 
 # Local database
 backend/data/*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Local database
+backend/data/*.db
+*.db
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# OS files
+.DS_Store
+Thumbs.db

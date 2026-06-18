@@ -121,17 +121,16 @@ const Quiz: React.FC = () => {
   return (
     <div className="space-y-8 pb-12">
       <PageHeader
-        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Quiz" }]}
-        eyebrow="Quiz"
-        title="Practice with feedback"
-        description="Filter by topic or difficulty, answer one question at a time, and review performance before retrying."
+        breadcrumbs={[{ label: "Study desk", href: "/app/dashboard" }, { label: "Quiz" }]}
+        title="Practice intelligence."
+        description="Answer one focused question at a time, then review the ideas that need another pass."
         action={<Button icon={isGenerating ? Loader2 : Sparkles} disabled={!selectedSourceIds.length || isGenerating} onClick={handleGenerateQuiz}>Generate quiz</Button>}
       />
 
-      <Card className="p-4">
+      <Card className="bg-white p-5">
         <div className="flex flex-col gap-5">
           <div>
-            <p className="mb-3 text-sm font-medium text-muted">Source context</p>
+            <p className="mb-3 text-sm font-bold text-[#3F3F3A]">Source context</p>
             <div className="flex flex-wrap gap-2">
               {readySources.map((source) => (
                 <button
@@ -139,12 +138,12 @@ const Quiz: React.FC = () => {
                   type="button"
                   onClick={() => toggleSource(source.id)}
                   aria-pressed={selectedSourceIds.includes(source.id)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 ${selectedSourceIds.includes(source.id) ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:-translate-y-0.5 hover:border-indigo-200 hover:text-primary dark:bg-white/5"}`}
+                  className={`rounded-full border px-4 py-2 text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 ${selectedSourceIds.includes(source.id) ? "border-[#050505] bg-[#050505] text-white" : "border-[#D9D1B8] bg-white text-[#3F3F3A] hover:-translate-y-0.5 hover:border-[#E6D979] hover:bg-[#FFF6B8] hover:text-primary dark:bg-white/5"}`}
                 >
                   {source.name}
                 </button>
               ))}
-              {!readySources.length && <span className="text-sm font-medium text-muted">Upload a readable source before generating a quiz.</span>}
+              {!readySources.length && <span className="text-sm font-medium text-[#3F3F3A]">Upload a readable source before generating a quiz.</span>}
             </div>
           </div>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -189,27 +188,27 @@ const Quiz: React.FC = () => {
         />
       ) : submitted ? (
         <div className="mx-auto max-w-4xl">
-          <Card className="p-8">
+          <Card className="bg-white p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
+                <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-[#D9D1B8] bg-white text-primary">
                   <Trophy className="h-8 w-8" />
                 </div>
-                <h2 className="mt-5 text-3xl font-semibold text-primary">Score: {score} / {questions.length}</h2>
-                <p className="mt-2 text-sm text-muted">Accuracy {Math.round((score / questions.length) * 100)}%</p>
+                <h2 className="mt-5 text-4xl font-black tracking-[-0.03em] text-primary">Score: {score} / {questions.length}</h2>
+                <p className="mt-2 text-sm font-bold text-[#3F3F3A]">Accuracy {Math.round((score / questions.length) * 100)}%</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button icon={RotateCcw} onClick={() => resetQuiz()}>New round</Button>
                 <Button variant="soft" icon={Target} disabled={!incorrectQuestions.length} onClick={retryIncorrect}>Retry incorrect</Button>
               </div>
             </div>
-            <div className="mt-8 rounded-2xl border border-default bg-slate-50 p-5 dark:bg-white/5">
-              <h3 className="font-semibold text-primary">Recommended next step</h3>
-              <p className="mt-2 text-sm leading-6 text-muted">
+            <div className="mt-8 rounded-[24px] border border-[#D9D1B8] bg-white p-5 dark:bg-white/5">
+              <h3 className="font-black text-primary">Recommended next step</h3>
+              <p className="mt-2 text-sm font-medium leading-6 text-[#3F3F3A]">
                 {weakTopics.length ? `Review ${weakTopics.join(", ")} next, then retry only the missed questions.` : "No weak topics this round. Move up a difficulty or review flashcards to retain it."}
               </p>
             </div>
-            <h3 className="mt-8 text-xl font-semibold text-primary">Review answers</h3>
+            <h3 className="mt-8 text-xl font-black text-primary">Review answers</h3>
             <div className="mt-5 max-h-[28rem] space-y-3 overflow-y-auto pr-2 custom-scrollbar">
               {questions.map((question, index) => {
                 const answer = answers[question.id];
@@ -222,13 +221,13 @@ const Quiz: React.FC = () => {
                       setSubmitted(false);
                       setCurrentIndex(index);
                     }}
-                    className="w-full rounded-xl border border-default bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
+                    className="w-full rounded-[22px] border border-[#D9D1B8] bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:border-[#E6D979] hover:bg-[#FFF6B8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 dark:bg-white/5 dark:hover:bg-white/10"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <p className="line-clamp-1 text-sm font-medium text-primary">{question.prompt}</p>
                       <Badge color={correct ? "green" : "red"}>{correct ? "Correct" : "Missed"}</Badge>
                     </div>
-                    <p className="mt-2 text-xs text-muted">Your answer: {answer !== undefined ? question.choices[answer] : "Skipped"}</p>
+                    <p className="mt-2 text-xs text-[#6B675F]">Your answer: {answer !== undefined ? question.choices[answer] : "Skipped"}</p>
                   </button>
                 );
               })}
@@ -238,28 +237,28 @@ const Quiz: React.FC = () => {
       ) : (
         <div className="mx-auto max-w-4xl">
           <div className="mb-5">
-            <div className="mb-2 flex items-center justify-between text-sm text-muted">
+            <div className="mb-2 flex items-center justify-between text-sm text-[#3F3F3A]">
               <span>Question {currentIndex + 1} of {questions.length}</span>
               <span>{answeredCount} answered</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-surface2">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full border border-[#E6D979] bg-[#FFF6B8]">
+              <div className="h-full rounded-full bg-[#050505] transition-all" style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }} />
             </div>
           </div>
-          <Card className="p-6 md:p-8">
+          <Card className="bg-white p-6 md:p-9">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Badge color="gray">{currentQuestion.topic}</Badge>
               <Badge color={currentQuestion.difficulty === "hard" ? "red" : currentQuestion.difficulty === "medium" ? "orange" : "green"}>
                 {currentQuestion.difficulty}
               </Badge>
             </div>
-            <div className="mt-6 flex items-center gap-3 text-sm font-medium text-muted">
-              <Brain className="h-5 w-5 text-muted" />
+            <div className="mt-6 flex items-center gap-3 text-sm font-bold text-[#3F3F3A]">
+              <Brain className="h-5 w-5 text-[#3F3F3A]" />
               Choose the best answer
             </div>
-            <h2 className="mt-5 text-2xl font-semibold leading-9 text-primary md:text-3xl">{currentQuestion.prompt}</h2>
-            <div className="mt-6 rounded-2xl border border-default bg-slate-50 p-4 dark:bg-white/5">
-              <p className="text-sm font-medium text-primary">How confident are you before answering?</p>
+            <h2 className="mt-5 text-3xl font-black leading-tight tracking-[-0.03em] text-primary md:text-5xl">{currentQuestion.prompt}</h2>
+            <div className="mt-7 rounded-[24px] border border-[#D9D1B8] bg-white p-4 dark:bg-white/5">
+              <p className="text-sm font-black text-primary">How confident are you before answering?</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {(["low", "medium", "high"] as const).map((level) => (
                   <button
@@ -268,10 +267,10 @@ const Quiz: React.FC = () => {
                     aria-pressed={selectedConfidence === level}
                     disabled={isAnswered}
                     onClick={() => setConfidence((prev) => ({ ...prev, [currentQuestion.id]: level }))}
-                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 disabled:opacity-60 ${
+                    className={`rounded-full border px-4 py-2 text-sm font-bold capitalize transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 disabled:opacity-60 ${
                       selectedConfidence === level
-                        ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10"
-                        : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
+                        ? "border-[#050505] bg-[#050505] text-white"
+                        : "border-[#D9D1B8] bg-white text-[#3F3F3A] hover:border-[#E6D979] hover:text-primary dark:bg-white/5"
                     }`}
                   >
                     {level}
@@ -291,16 +290,16 @@ const Quiz: React.FC = () => {
                     disabled={!selectedConfidence && !reveal}
                     onClick={() => chooseAnswer(index)}
                     aria-pressed={isSelected}
-                    className={`flex w-full items-center gap-3 rounded-2xl border p-4 text-left text-sm font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
+                    className={`flex w-full items-center gap-3 rounded-[24px] border p-4 text-left text-sm font-bold transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 ${
                       reveal && isCorrect
                         ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                         : reveal && isSelected
                           ? "border-rose-200 bg-rose-50 text-rose-800"
                           : isSelected
-                            ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10"
+                            ? "border-[#050505] bg-[#050505] text-white dark:bg-indigo-400/10"
                             : selectedConfidence
-                              ? "border-default bg-white text-primary hover:border-indigo-200 hover:bg-slate-50 dark:bg-white/5 dark:hover:bg-white/10"
-                              : "border-default bg-slate-50 text-muted dark:bg-white/5"
+                              ? "border-[#D9D1B8] bg-white text-primary hover:border-[#E6D979] hover:bg-white dark:bg-white/5 dark:hover:bg-white/10"
+                              : "border-[#D9D1B8] bg-white/70 text-[#6B675F] dark:bg-white/5"
                     }`}
                   >
                     {reveal && isCorrect ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
@@ -310,11 +309,11 @@ const Quiz: React.FC = () => {
               })}
             </div>
             {isAnswered && (
-              <div className="mt-6 rounded-2xl border border-default bg-slate-50 p-5 dark:bg-white/5">
-                <h3 className="font-semibold text-primary">{selectedAnswer === currentQuestion.correctChoiceIndex ? "Correct" : "Good try"}</h3>
-                <p className="mt-2 text-sm leading-6 text-muted">{currentQuestion.explanation}</p>
+              <div className="mt-6 rounded-[24px] border border-[#D9D1B8] bg-white p-5 dark:bg-white/5">
+                <h3 className="font-black text-primary">{selectedAnswer === currentQuestion.correctChoiceIndex ? "Correct" : "Good try"}</h3>
+                <p className="mt-2 text-sm font-medium leading-6 text-[#3F3F3A]">{currentQuestion.explanation}</p>
                 {currentQuestion.sourceExcerpt && (
-                  <p className="mt-4 rounded-2xl bg-white/60 p-3 text-xs font-semibold leading-5 text-muted">
+                  <p className="mt-4 rounded-2xl border border-[#D9D1B8] bg-[#FFF6B8] p-3 text-xs font-semibold leading-5 text-[#3F3F3A]">
                     Source: {currentQuestion.sourceExcerpt}
                   </p>
                 )}

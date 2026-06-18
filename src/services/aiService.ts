@@ -1,5 +1,5 @@
 import { API_ROUTES, apiFetch } from "../lib/api";
-import type { Citation } from "../../types";
+import type { ChatMessage, Citation } from "../../types";
 
 export type BackendCitation = Citation & {
   source_id?: string;
@@ -13,14 +13,21 @@ export type AskAiResult = {
   citations: BackendCitation[];
 };
 
-export async function askAiWithSources(question: string, sourceIds: string[]): Promise<AskAiResult> {
+export async function askAiWithSources(question: string, sourceIds: string[], messages: ChatMessage[] = []): Promise<AskAiResult> {
   // TODO: Replace direct frontend-to-API fetches with a dedicated backend client once
   // LearnBot has a production API gateway, request tracing, and model safety middleware.
   const res = await apiFetch(API_ROUTES.chat, {
     method: "POST",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, sourceIds }),
+    body: JSON.stringify({
+      question,
+      sourceIds,
+      messages: messages.slice(-8).map((message) => ({
+        role: message.role,
+        content: message.content,
+      })),
+    }),
   });
 
   if (!res.ok) {

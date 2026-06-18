@@ -155,6 +155,61 @@ def _collect_source_text(user_id: str, source_ids: list[str], *, max_chars: int 
     return source_text, sources
 
 
+def _format_chat_history(messages: list[Any] | None, current_question: str, *, limit: int = 8) -> str:
+    if not messages:
+        return "No previous conversation."
+
+    normalized: list[str] = []
+    for message in messages[-limit:]:
+        role = str(getattr(message, "role", "") or "").strip().lower()
+        content = str(getattr(message, "content", "") or "").strip()
+        if not content:
+            continue
+        if role == "user" and content == current_question:
+            continue
+        speaker = "Student" if role == "user" else "LearnBot"
+        normalized.append(f"{speaker}: {content[:900]}")
+
+    return "\n".join(normalized) if normalized else "No previous conversation."
+
+
+def _dedupe_chunks(chunks: list[dict[str, Any]], *, limit: int) -> list[dict[str, Any]]:
+    seen: set[str] = set()
+    result: list[dict[str, Any]] = []
+    for chunk in chunks:
+        chunk_id = str(chunk.get("id") or "")
+        key = chunk_id or f"{chunk.get('source_id')}:{chunk.get('page')}:{chunk.get('snippet')}"
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(chunk)
+        if len(result) >= limit:
+            break
+    return result
+
+
+def _add_neighbor_chunks(user_id: str, chunks: list[dict[str, Any]], source_ids: list[str] | None, *, limit: int = 10) -> list[dict[str, Any]]:
+    if not chunks:
+        return []
+
+    selected_sources = set(source_ids or [str(chunk.get("source_id")) for chunk in chunks if chunk.get("source_id")])
+    expanded: list[dict[str, Any]] = []
+    by_source = {source_id: db.list_chunks_by_source(user_id=user_id, source_id=source_id) for source_id in selected_sources}
+
+    for chunk in chunks:
+        source_chunks = by_source.get(str(chunk.get("source_id"))) or []
+        chunk_id = str(chunk.get("id") or "")
+        index = next((i for i, item in enumerate(source_chunks) if str(item.get("id")) == chunk_id), -1)
+        if index < 0:
+            expanded.append(chunk)
+            continue
+        for neighbor_index in (index - 1, index, index + 1):
+            if 0 <= neighbor_index < len(source_chunks):
+                expanded.append(source_chunks[neighbor_index])
+
+    return _dedupe_chunks(expanded, limit=limit)
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
@@ -546,7 +601,13 @@ def chat(payload: ChatRequest, user_id: str = Depends(get_current_user_id)) -> d
     user_dir = _user_dir(user_id)
     store = UserVectorStore(user_dir)
 
-    logger.info("Chat request user_id=%s source_ids=%s question_len=%s", user_id, payload.sourceIds or [], len(payload.question))
+    logger.info(
+        "Chat request user_id=%s source_ids=%s question_len=%s history_messages=%s",
+        user_id,
+        payload.sourceIds or [],
+        len(payload.question),
+        len(payload.messages or []),
+    )
     if payload.sourceIds:
         selected_chunk_count = sum(
             len(db.list_chunks_by_source(user_id=user_id, source_id=source_id))
@@ -569,11 +630,16 @@ def chat(payload: ChatRequest, user_id: str = Depends(get_current_user_id)) -> d
         allowed = set(payload.sourceIds)
         chunks = [c for c in chunks if c["source_id"] in allowed]
         logger.info("Chat chunks after source filter user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, len(chunks))
+        if len(chunks) < 6:
+            wider_chunk_ids = store.search(q_vec, k=100)
+            wider_chunks = [c for c in db.get_chunks(user_id, wider_chunk_ids) if c["source_id"] in allowed]
+            chunks = _dedupe_chunks([*chunks, *wider_chunks], limit=12)
+            logger.info("Chat wider vector search user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, len(chunks))
         if not chunks:
             fallback_chunks: list[dict[str, Any]] = []
             for source_id in payload.sourceIds:
-                fallback_chunks.extend(db.list_chunks_by_source(user_id=user_id, source_id=source_id, limit=6))
-            chunks = fallback_chunks[:6]
+                fallback_chunks.extend(db.list_chunks_by_source(user_id=user_id, source_id=source_id, limit=10))
+            chunks = fallback_chunks[:10]
             logger.info("Chat fallback source chunks user_id=%s source_ids=%s chunk_count=%s", user_id, payload.sourceIds, len(chunks))
 
     if not chunks:
@@ -582,9 +648,20 @@ def chat(payload: ChatRequest, user_id: str = Depends(get_current_user_id)) -> d
             detail="No relevant context was found in the selected source. Try a broader question or re-upload the document.",
         )
 
+    chunks = _add_neighbor_chunks(user_id, chunks, payload.sourceIds, limit=10)
+    context_char_count = sum(len(str(chunk.get("content") or "")) for chunk in chunks)
+    context_is_thin = len(chunks) < 3 or context_char_count < 1200
+    logger.info(
+        "Chat context assembled user_id=%s chunk_count=%s context_chars=%s context_is_thin=%s",
+        user_id,
+        len(chunks),
+        context_char_count,
+        context_is_thin,
+    )
+
     citations: list[dict[str, Any]] = []
     context_blocks: list[str] = []
-    for i, chunk in enumerate(chunks[:6], start=1):
+    for i, chunk in enumerate(chunks[:8], start=1):
         citations.append(
             {
                 "source_id": chunk["source_id"],
@@ -598,12 +675,39 @@ def chat(payload: ChatRequest, user_id: str = Depends(get_current_user_id)) -> d
             f"[{i}] ({chunk['source_name']} - {page_label})\n{chunk['content']}"
         )
 
+    conversation_history = _format_chat_history(payload.messages, payload.question)
+    context_note = (
+        "The retrieved notes look thin or fragmentary. If they only contain headings, examples, or partial text, briefly say that and then teach the concept using reliable general knowledge."
+        if context_is_thin
+        else "The retrieved notes are substantial. Ground the explanation primarily in them."
+    )
     prompt = (
-        "You are LearnBot. Use only the provided context. "
-        "If the context is insufficient, say so clearly.\n\n"
+        "You are LearnBot, a warm study coach and smart teaching assistant. "
+        "Your job is to help the student understand and remember the material, not to report retrieval failures.\n\n"
+        "Priority order:\n"
+        "1. Use the retrieved source notes as grounding.\n"
+        "2. Use the conversation history to understand follow-up questions like 'give me an example' or 'explain in detail'.\n"
+        "3. When the notes are incomplete, supplement with your general knowledge and clearly separate it from what the notes directly say.\n\n"
+        "Behavior rules:\n"
+        "- Never stop with phrases like 'the context does not contain enough information' or 'I cannot explain further'.\n"
+        "- If the source page only lists titles, terms, or examples, say that once in a friendly way, then teach the concepts.\n"
+        "- Treat follow-up actions as continuations of the same conversation; do not restart with another retrieval limitation.\n"
+        "- Sound like a tutor: conversational, example-driven, encouraging, and concrete.\n"
+        "- Avoid filler like 'Alright, let's break down', 'the provided context says', 'as an AI', or robotic caveats.\n"
+        "- Prefer direct teaching lines like 'Think of it this way...' or 'This matters because...'.\n"
+        "- Use citations only for ideas supported by the retrieved notes. Do not invent citations for general background knowledge.\n\n"
+        "Formatting rules:\n"
+        "- Write plain study notes, not markdown-heavy output.\n"
+        "- Do not use markdown heading markers like #, ##, or ###.\n"
+        "- Use flexible sections only when they fit: Title, short explanation, Why it matters, Example, From your notes, Try this.\n"
+        "- Do not force everything into bullets. Use paragraphs for explanations.\n"
+        "- If the student asks for an example, always include a concrete example. For technical topics, include a simple step-by-step or small text/number diagram.\n"
+        "- If you include a source note, write it naturally as 'Your notes mention...' rather than 'The provided context says...'.\n\n"
+        f"Context quality note: {context_note}\n\n"
+        f"Conversation so far:\n{conversation_history}\n\n"
         f"Question: {payload.question}\n\n"
         f"Context:\n{'\n\n'.join(context_blocks)}\n\n"
-        "Return a concise answer."
+        "Answer as a helpful study coach. Make the response feel like clear study notes from a smart TA."
     )
 
     answer = gemini.generate_answer(prompt)

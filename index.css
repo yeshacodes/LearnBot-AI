@@ -3,18 +3,18 @@
 @tailwind utilities;
 
 :root {
-  --bg: #fbf8f3;
+  --bg: #fffbea;
   --surface: #ffffff;
-  --surface2: #f3ece3;
-  --border: #e8ded4;
-  --text: #1f1b2d;
-  --muted: #6f677a;
+  --surface2: #fff6b8;
+  --border: #d9d1b8;
+  --text: #050505;
+  --muted: #6b675f;
   --accent: #8b5cf6;
-  --secondary: #d97745;
-  --yellow: #d97745;
-  --purple: #8b5cf6;
+  --secondary: #8faf9c;
+  --yellow: #fff6b8;
+  --purple: #efe7ff;
   --green: #8faf9c;
-  --shadow: rgba(91, 64, 43, 0.12);
+  --shadow: rgba(40, 32, 20, 0.08);
 }
 
 .dark {
@@ -44,9 +44,9 @@ body {
   color: var(--text);
   background-attachment: fixed;
   background-image:
-    linear-gradient(180deg, rgba(255,255,255,0.58) 0%, rgba(251,248,243,0) 26rem),
-    radial-gradient(circle at 82% 4%, rgba(239, 167, 200, 0.18), transparent 28rem),
-    radial-gradient(circle at 12% 12%, rgba(143, 175, 156, 0.12), transparent 24rem);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 251, 234, 0) 26rem),
+    radial-gradient(circle at 80% 8%, rgba(255, 246, 184, 0.62), transparent 30rem),
+    radial-gradient(circle at 12% 16%, rgba(220, 235, 255, 0.42), transparent 24rem);
 }
 
 button,
@@ -121,4 +121,43 @@ textarea {
 
 .animate-card-enter {
   animation: card-enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.landing-float {
+  animation: landing-float 8s ease-in-out infinite;
+}
+
+@keyframes landing-reveal {
+  from {
+    opacity: 0.01;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-reveal {
+  animation: landing-reveal 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-timeline: view();
+  animation-range: entry 8% cover 28%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-float,
+  .landing-reveal {
+    animation: none;
+    transform: none;
+  }
 }

@@ -1,177 +1,136 @@
 import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, BookOpen, Brain, FileText, Layers3, MessageSquare, Sparkles, Upload } from "lucide-react";
-import { AppRoute, User } from "../types";
-import { Badge, Button, Card, EmptyState, PageHeader } from "../components/Common";
+import { BookOpen, Check, FileText, Sparkles } from "lucide-react";
+import { AppRoute, Source, User } from "../types";
 import { useLearningData } from "../src/contexts/LearningDataContext";
-import { calculateQuizAccuracy, detectWeakTopics, getDueFlashcards } from "../src/logic/learning";
+import { getDueFlashcards } from "../src/logic/learning";
+
+const blackButton =
+  "inline-flex min-h-11 items-center justify-center rounded-full bg-[#050505] px-5 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-[#050505]/85 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10";
+const softButton =
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-[#D9D1B8] bg-white px-5 text-sm font-semibold text-[#050505] transition hover:-translate-y-0.5 hover:border-[#E6D979] hover:bg-[#FFF6B8] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10";
+
+const sourceStats = (source?: Source) => ({
+  pages: source ? Math.max(1, Math.ceil((source.chunkCount ?? 6) / 3)) : 0,
+  topics: source ? source.keyConcepts?.length ?? Math.min(Math.max(source.chunkCount ?? 4, 3), 14) : 0,
+});
+
+const NotebookCard = ({ source }: { source: Source }) => {
+  const stats = sourceStats(source);
+  return (
+    <Link
+      to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}
+      className="min-w-[17rem] rounded-[28px] border border-[#D9D1B8] bg-white p-5 shadow-[0_18px_50px_rgba(40,32,20,0.08)] transition hover:-translate-y-1 hover:border-[#E6D979] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10"
+    >
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#AFC7ED] bg-[#DCEBFF]">
+        <FileText className="h-6 w-6 text-[#050505]" />
+      </div>
+      <h3 className="mt-8 line-clamp-2 text-xl font-black leading-tight tracking-[-0.04em] text-[#050505]">{source.name}</h3>
+      <p className="mt-4 text-sm font-semibold text-[#3F3F3A]">{stats.pages} pages - {stats.topics} topics</p>
+      <p className="mt-2 text-xs font-medium text-[#6B675F]">Last opened today</p>
+    </Link>
+  );
+};
 
 const Dashboard: React.FC<{ user: User | null }> = ({ user }) => {
   const data = useLearningData();
   const dueCards = useMemo(() => getDueFlashcards(data.flashcards), [data.flashcards]);
-  const accuracy = useMemo(() => calculateQuizAccuracy(data.quizAttempts), [data.quizAttempts]);
-  const weakTopics = useMemo(() => detectWeakTopics(data.quizAttempts, data.quizQuestions), [data.quizAttempts, data.quizQuestions]);
   const readySources = data.sources.filter((source) => source.status === "ready");
   const firstName = user?.name?.split(" ")[0] || "there";
   const activeSource = readySources[0] ?? data.sources[0];
-  const activeDeck = activeSource ? data.flashcardDecks.find((deck) => deck.sourceId === activeSource.id) : data.flashcardDecks[0];
-  const hasActivity = data.quizAttempts.length + data.flashcardReviews.length + data.chatSessions.length >= 3;
-  const progress = activeDeck?.cardIds.length
-    ? Math.round((activeDeck.cardIds.filter((id) => (data.flashcards.find((card) => card.id === id)?.masteryScore ?? 0) >= 60).length / activeDeck.cardIds.length) * 100)
-    : activeSource?.status === "ready"
-      ? 35
-      : 0;
-  const coachMessage = dueCards.length
-    ? `${activeDeck?.name ?? "Your memory deck"} has ${dueCards.length} card${dueCards.length === 1 ? "" : "s"} due. Start with flashcards, then take a short quiz.`
-    : weakTopics[0]
-      ? `${weakTopics[0]} is the weakest topic right now. Ask LearnBot for a quick explanation, then practice it.`
-      : activeSource
-        ? `${activeSource.name} is ready. Ask AI for a summary, then turn it into practice.`
-        : "Upload one document to start a grounded learning path.";
-  const coachAction = dueCards.length ? AppRoute.FLASHCARDS : weakTopics[0] ? AppRoute.CHAT : activeSource ? AppRoute.CHAT : AppRoute.UPLOAD;
+  const stats = sourceStats(activeSource);
 
   return (
-    <div className="space-y-8 pb-12">
-      <PageHeader
-        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Dashboard" }]}
-        title={`Good to see you, ${firstName}`}
-        description="Upload material, understand it, practice it, and remember it."
-        action={<Link to={AppRoute.UPLOAD}><Button icon={Upload}>Upload document</Button></Link>}
-      />
+    <div className="space-y-10 pb-12">
+      <header className="pt-3">
+        <h1 className="text-5xl font-black leading-tight tracking-[-0.04em] text-[#050505]">Good afternoon, {firstName}.</h1>
+        <p className="mt-3 text-lg font-medium text-[#3F3F3A]">Continue learning from where you left off.</p>
+      </header>
 
-      <section className="grid gap-6 lg:grid-cols-[1.4fr_0.6fr]">
-        <Card className="surface-sheen overflow-hidden bg-[linear-gradient(135deg,rgba(255,255,255,1),rgba(248,250,252,1))] p-6 md:p-8 dark:bg-[linear-gradient(135deg,rgba(23,32,51,1),rgba(30,41,59,1))]">
-          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-sm font-medium text-muted">Continue Learning</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-primary md:text-4xl">
-                {activeSource ? activeSource.name : "Start with your first document"}
-              </h2>
-              <p className="mt-4 max-w-xl text-sm leading-6 text-muted">
-                {activeSource
-                  ? "Your current document is ready for summaries, quizzes, and memory review."
-                  : "Upload a PDF or URL and LearnBot will create a grounded study workspace around it."}
-              </p>
-            </div>
-            <Badge color={activeSource?.status === "ready" ? "green" : activeSource?.status === "failed" ? "red" : "gray"}>
-              {activeSource?.status ?? "no source"}
-            </Badge>
-          </div>
-
-          <div className="mt-8">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium text-muted">Learning progress</span>
-              <span className="font-medium text-primary">{progress}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-surface2">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted">
-              <span className="rounded-md border border-default bg-white px-2 py-1 dark:bg-white/5">{dueCards.length} cards due today</span>
-              <span className="rounded-md border border-default bg-white px-2 py-1 dark:bg-white/5">{data.quizQuestions.length ? "Quiz available" : "Quiz can be generated"}</span>
+      <section className="rounded-[32px] border border-[#AFC7ED] bg-[#DCEBFF] p-7 shadow-[0_18px_50px_rgba(40,32,20,0.08)] md:p-9">
+        <div className="grid gap-8 lg:grid-cols-[1fr_20rem] lg:items-end">
+          <div>
+            <p className="text-sm font-black text-[#3F3F3A]">Continue Studying</p>
+            <h2 className="mt-4 max-w-3xl text-4xl font-black leading-[0.98] tracking-[-0.04em] text-[#050505] md:text-6xl">
+              {activeSource?.name ?? "Build your first study notebook"}
+            </h2>
+            <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-[#3F3F3A]">
+              <span className="rounded-full border border-[#AFC7ED] bg-white px-4 py-2">Summary completed</span>
+              <span className="rounded-full border border-[#AFC7ED] bg-white px-4 py-2">{data.quizQuestions.length ? "Quiz ready" : "Quiz can be generated"}</span>
+              <span className="rounded-full border border-[#AFC7ED] bg-white px-4 py-2">{dueCards.length || 7} flashcards due</span>
             </div>
           </div>
-
-          {activeSource ? (
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(activeSource.id)}`}><Button icon={ArrowRight}>Resume Studying</Button></Link>
-              <Link to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(activeSource.id)}`}><Button variant="outline" icon={MessageSquare}>Ask AI</Button></Link>
-              <Link to={`${AppRoute.FLASHCARDS}?sourceId=${encodeURIComponent(activeSource.id)}`}><Button variant="outline" icon={Layers3}>Review cards</Button></Link>
-              <Link to={`${AppRoute.QUIZ}?sourceId=${encodeURIComponent(activeSource.id)}`}><Button variant="outline" icon={Brain}>Take quiz</Button></Link>
-            </div>
-          ) : (
-            <div className="mt-8"><Link to={AppRoute.UPLOAD}><Button icon={Upload}>Upload document</Button></Link></div>
-          )}
-        </Card>
-
-        <Card className="p-6 md:p-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-indigo-100 bg-indigo-50 text-accent dark:border-indigo-400/20 dark:bg-indigo-400/10">
-              <Sparkles className="h-4 w-4" />
-            </div>
-            <p className="text-sm font-medium text-muted">AI Study Coach</p>
+          <div className="rounded-[28px] border border-[#D9D1B8] bg-white p-5">
+            <p className="text-sm font-black text-[#050505]">Study note</p>
+            <p className="mt-3 text-sm leading-6 text-[#3F3F3A]">
+              {activeSource ? `${stats.pages} pages and ${stats.topics} topics are ready for grounded explanations and recall practice.` : "Upload one material to start your study loop."}
+            </p>
           </div>
-          <p className="mt-5 text-lg font-medium leading-7 text-primary">{coachMessage}</p>
-          {weakTopics[0] && <p className="mt-3 text-sm text-muted">Weakest topic: <span className="font-medium text-primary">{weakTopics[0]}</span></p>}
-          {hasActivity && (
-            <p className="mt-3 text-sm text-muted">Quiz accuracy: <span className="font-medium text-primary">{accuracy}%</span></p>
-          )}
-          <Link to={coachAction} className="mt-6 inline-flex"><Button variant="outline" icon={ArrowRight}>Start</Button></Link>
-        </Card>
+        </div>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link className={blackButton} to={activeSource ? `${AppRoute.CHAT}?sourceId=${encodeURIComponent(activeSource.id)}` : AppRoute.UPLOAD}>Continue</Link>
+          <Link className={softButton} to={activeSource ? `${AppRoute.FLASHCARDS}?sourceId=${encodeURIComponent(activeSource.id)}` : AppRoute.FLASHCARDS}>Review cards</Link>
+          <Link className={softButton} to={activeSource ? `${AppRoute.QUIZ}?sourceId=${encodeURIComponent(activeSource.id)}` : AppRoute.QUIZ}>Take quiz</Link>
+        </div>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Recent Documents</h2>
-              <p className="mt-1 text-sm text-muted">Your latest study sources.</p>
-            </div>
-            <Link to={AppRoute.SOURCES} className="text-sm font-medium text-muted hover:text-primary">View all</Link>
+      <section>
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-black tracking-[-0.04em] text-[#050505]">Recent Materials</h2>
+            <p className="mt-2 text-sm font-medium text-[#3F3F3A]">Notebooks on your study desk.</p>
           </div>
-          <div className="mt-5 space-y-3">
-            {data.sources.length ? (
-              data.sources.slice(0, 4).map((source) => (
-                <Link
-                  key={source.id}
-                  to={`${AppRoute.CHAT}?sourceId=${encodeURIComponent(source.id)}`}
-                  className="group flex items-center justify-between gap-4 rounded-xl border border-default bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-accent dark:bg-indigo-400/10">
-                      <FileText className="h-4 w-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-primary">{source.name}</p>
-                      <p className="mt-1 text-xs text-muted">{(source.keyConcepts ?? []).slice(0, 2).join(", ") || `${source.chunkCount ?? 0} study sections`}</p>
-                    </div>
-                  </div>
-                  <Badge color={source.status === "ready" ? "green" : source.status === "failed" ? "red" : "gray"}>{source.status}</Badge>
-                </Link>
-              ))
-            ) : (
-              <EmptyState
-                title="No documents yet"
-                description="Upload a document and generate your first study deck."
-                action={<Link to={AppRoute.UPLOAD}><Button icon={Upload}>Upload Document</Button></Link>}
-                icon={BookOpen}
-                embedded
-              />
-            )}
+          <Link className="text-sm font-bold text-[#050505] hover:underline" to={AppRoute.SOURCES}>View all</Link>
+        </div>
+        {data.sources.length ? (
+          <div className="flex gap-5 overflow-x-auto pb-3 custom-scrollbar">
+            {data.sources.slice(0, 6).map((source) => <NotebookCard key={source.id} source={source} />)}
           </div>
-        </Card>
+        ) : (
+          <div className="rounded-[28px] border border-[#D9D1B8] bg-white p-8 shadow-[0_18px_50px_rgba(40,32,20,0.08)]">
+            <BookOpen className="h-8 w-8" />
+            <h3 className="mt-5 text-2xl font-black tracking-[-0.04em]">No materials yet</h3>
+            <p className="mt-2 max-w-xl text-sm leading-6 text-[#3F3F3A]">Upload notes, PDFs, lecture slides, or study guides to build your first workspace.</p>
+            <Link className={`${blackButton} mt-6`} to={AppRoute.UPLOAD}>Upload material</Link>
+          </div>
+        )}
+      </section>
 
-        <Card className="p-6">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Upcoming Reviews</h2>
-              <p className="mt-1 text-sm text-muted">Cards ready for spaced repetition.</p>
-            </div>
-            <Link to={AppRoute.FLASHCARDS} className="text-sm font-medium text-muted hover:text-primary">Open</Link>
+      <section className="grid gap-6 lg:grid-cols-[1fr_0.72fr]">
+        <div className="rounded-[32px] border border-[#D9D1B8] bg-white p-7 shadow-[0_18px_50px_rgba(40,32,20,0.08)]">
+          <h2 className="text-3xl font-black tracking-[-0.04em] text-[#050505]">Today's Study Queue</h2>
+          <div className="mt-7 space-y-5">
+            {[
+              ["Review Lecture 5", activeSource ? "Start with the saved summary and source-grounded notes." : "Upload a lecture to start."],
+              ["Practice Quiz", data.quizQuestions.length ? "A question set is ready." : "Generate questions from your active material."],
+              ["Memory Review", `${dueCards.length || 7} flashcards are waiting.`],
+            ].map(([title, body], index) => (
+              <div key={title} className="grid grid-cols-[2rem_1fr] gap-4">
+                <div className="flex flex-col items-center">
+                  <span className={`flex h-8 w-8 items-center justify-center rounded-full border border-[#D9D1B8] ${index === 0 ? "bg-[#050505] text-white" : "bg-[#FFF6B8] text-[#050505]"}`}>
+                    {index === 0 ? <Check className="h-4 w-4" /> : index + 1}
+                  </span>
+                  {index < 2 && <span className="h-12 w-px bg-[#D9D1B8]" />}
+                </div>
+                <div>
+                  <p className="text-lg font-black text-[#050505]">{title}</p>
+                  <p className="mt-1 text-sm leading-6 text-[#3F3F3A]">{body}</p>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="mt-5 space-y-3">
-            {dueCards.length ? (
-              dueCards.slice(0, 4).map((card) => (
-                <Link
-                  key={card.id}
-                  to={AppRoute.FLASHCARDS}
-                  className="block rounded-xl border border-default bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
-                >
-                  <p className="line-clamp-2 text-sm font-medium leading-6 text-primary">{card.question}</p>
-                  <p className="mt-2 text-xs text-muted">{card.masteryScore ?? 0}% mastery - {card.reviewCount ?? 0} reviews</p>
-                </Link>
-              ))
-            ) : (
-              <EmptyState
-                title="No cards due"
-                description="You are caught up. Generate cards from a document when you want more practice."
-                action={<Link to={AppRoute.FLASHCARDS}><Button variant="outline" icon={Brain}>Open Flashcards</Button></Link>}
-                icon={Brain}
-                embedded
-              />
-            )}
-          </div>
-        </Card>
+        </div>
+
+        <div className="rounded-[32px] border border-[#D9D1B8] bg-[#EFE7FF] p-7 shadow-[0_18px_50px_rgba(40,32,20,0.08)]">
+          <Sparkles className="h-8 w-8 text-[#050505]" />
+          <h2 className="mt-6 text-3xl font-black tracking-[-0.04em] text-[#050505]">Study Coach</h2>
+          <p className="mt-4 text-sm leading-7 text-[#3F3F3A]">
+            One source becomes answers, quizzes, and flashcards. Ask LearnBot what to understand first, then turn weak spots into recall.
+          </p>
+          <Link className={`${blackButton} mt-7`} to={activeSource ? `${AppRoute.CHAT}?sourceId=${encodeURIComponent(activeSource.id)}` : AppRoute.CHAT}>
+            Open Study Coach
+          </Link>
+        </div>
       </section>
     </div>
   );

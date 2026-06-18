@@ -9,9 +9,15 @@ class URLIngestRequest(BaseModel):
     url: HttpUrl
 
 
+class ChatHistoryMessage(BaseModel):
+    role: str
+    content: str
+
+
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1)
     sourceIds: list[str] | None = None
+    messages: list[ChatHistoryMessage] | None = None
 
 
 class Citation(BaseModel):

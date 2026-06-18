@@ -1,67 +1,59 @@
-
-import React, { useEffect, useState } from 'react';
-import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  UploadCloud, 
-  Sparkles,
-  Layers3, 
-  Library, 
-  Settings2, 
-  LogOut, 
-  Menu, 
-  X, 
+import React, { useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  BookOpen,
+  Brain,
   Columns2,
   LayoutDashboard,
-  Brain
-} from 'lucide-react';
-import { AppRoute } from '../types';
-import { useAuth } from '../src/contexts/AuthContext';
-import { getBool, setBool } from '../src/lib/uiPrefs';
-import { supabase } from '../src/lib/supabase';
+  Layers3,
+  Library,
+  LogOut,
+  Menu,
+  Settings2,
+  Sparkles,
+  UploadCloud,
+} from "lucide-react";
+import { AppRoute } from "../types";
+import { useAuth } from "../src/contexts/AuthContext";
+import { getBool, setBool } from "../src/lib/uiPrefs";
+import { supabase } from "../src/lib/supabase";
 
 const CHAT_SIDEBAR_COLLAPSED_KEY = "learnbot_chat_sidebar_collapsed";
 const CHAT_CONTEXT_COLLAPSED_KEY = "learnbot_chat_context_collapsed";
-const NAV_COLLAPSED_KEY = "learnbot_nav_collapsed";
+
+const navItems = [
+  { label: "Dashboard", path: AppRoute.DASHBOARD, icon: LayoutDashboard },
+  { label: "Materials", path: AppRoute.SOURCES, icon: Library },
+  { label: "Study Coach", path: AppRoute.CHAT, icon: Sparkles },
+  { label: "Flashcards", path: AppRoute.FLASHCARDS, icon: Layers3 },
+  { label: "Quiz", path: AppRoute.QUIZ, icon: Brain },
+  { label: "Memory", path: AppRoute.UPLOAD, icon: UploadCloud },
+  { label: "Settings", path: AppRoute.SETTINGS, icon: Settings2 },
+];
 
 const DashboardLayout: React.FC = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [chatContextCollapsed, setChatContextCollapsed] = useState<boolean>(() => getBool(CHAT_CONTEXT_COLLAPSED_KEY, false));
-  const [navCollapsed, setNavCollapsed] = useState<boolean>(() => getBool(NAV_COLLAPSED_KEY, false));
   const [profileDisplayName, setProfileDisplayName] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isChatRoute = location.pathname === AppRoute.CHAT;
-  const displayName =
-    profileDisplayName ||
-    (user?.email ? user.email.split("@")[0] : "User");
-
-  const navItems = [
-    { label: 'Dashboard', path: AppRoute.DASHBOARD, icon: LayoutDashboard },
-    { label: 'Upload', path: AppRoute.UPLOAD, icon: UploadCloud },
-    { label: 'Assistant', path: AppRoute.CHAT, icon: Sparkles },
-    { label: 'Quiz', path: AppRoute.QUIZ, icon: Brain },
-    { label: 'Memory', path: AppRoute.FLASHCARDS, icon: Layers3 },
-    { label: 'Sources', path: AppRoute.SOURCES, icon: Library },
-    { label: 'Settings', path: AppRoute.SETTINGS, icon: Settings2 },
-  ];
+  const displayName = profileDisplayName || (user?.email ? user.email.split("@")[0] : "User");
 
   const handleLogoutClick = async () => {
     setIsSigningOut(true);
     try {
       await signOut();
-      navigate('/login', { replace: true });
+      navigate("/login", { replace: true });
     } finally {
       setIsSigningOut(false);
     }
   };
 
   useEffect(() => {
-    const onPrefsChanged = () => {
-      setChatContextCollapsed(getBool(CHAT_CONTEXT_COLLAPSED_KEY, false));
-      setNavCollapsed(getBool(NAV_COLLAPSED_KEY, false));
-    };
+    const onPrefsChanged = () => setChatContextCollapsed(getBool(CHAT_CONTEXT_COLLAPSED_KEY, false));
     window.addEventListener("ui-prefs-changed", onPrefsChanged as EventListener);
     return () => window.removeEventListener("ui-prefs-changed", onPrefsChanged as EventListener);
   }, []);
@@ -73,17 +65,9 @@ const DashboardLayout: React.FC = () => {
         setProfileDisplayName(null);
         return;
       }
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data, error } = await supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle();
       if (cancelled) return;
-      if (error) {
-        setProfileDisplayName(null);
-        return;
-      }
-      setProfileDisplayName(data?.display_name ?? null);
+      setProfileDisplayName(error ? null : data?.display_name ?? null);
     };
     loadProfileName();
     return () => {
@@ -91,133 +75,104 @@ const DashboardLayout: React.FC = () => {
     };
   }, [user?.id]);
 
+  const dock = (
+    <nav className="flex flex-col items-center gap-2" aria-label="Primary navigation">
+      {navItems.map((item) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          onClick={() => setMobileNavOpen(false)}
+          className={({ isActive }) =>
+            `group relative flex h-12 w-12 items-center justify-center rounded-full border transition duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 ${
+              isActive
+                ? "border-[#D6C8FF] bg-[#EFE7FF] text-[#050505] shadow-[0_12px_28px_rgba(40,32,20,0.10)]"
+                : "border-transparent text-[#3F3F3A] hover:-translate-y-0.5 hover:border-[#D9D1B8] hover:bg-white hover:text-[#050505]"
+            }`
+          }
+        >
+          <item.icon className="h-5 w-5" strokeWidth={1.8} />
+          <span className="pointer-events-none absolute left-[4.1rem] z-20 hidden rounded-full bg-[#050505] px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 lg:block">
+            {item.label}
+          </span>
+        </NavLink>
+      ))}
+    </nav>
+  );
+
   return (
-    <div className="flex min-h-screen text-primary">
-      {/* Sidebar Overlay (Mobile) */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/30 z-40 lg:hidden backdrop-blur-sm"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+    <div className="min-h-screen bg-[#FFFBEA] text-[#050505]">
+      <button
+        type="button"
+        className="fixed left-4 top-4 z-50 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#D9D1B8] bg-white text-[#050505] shadow-[0_18px_50px_rgba(40,32,20,0.08)] lg:hidden"
+        onClick={() => setMobileNavOpen((open) => !open)}
+        aria-label="Toggle navigation"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {mobileNavOpen && (
+        <button className="fixed inset-0 z-40 bg-[#050505]/20 lg:hidden" type="button" onClick={() => setMobileNavOpen(false)} aria-label="Close navigation" />
       )}
 
-      <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 p-3
-        transition-all duration-200 ease-in-out transform lg:translate-x-0 lg:static lg:inset-0
-        ${navCollapsed ? 'lg:w-0 lg:p-0 lg:opacity-0 lg:overflow-hidden' : 'lg:w-64 lg:p-3 lg:opacity-100'}
-        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
-        <div className="flex h-full flex-col border-r border-default bg-card">
-          {/* Logo */}
-          <div className="flex h-20 items-center justify-between px-4">
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                type="button"
-                className="hidden rounded-lg p-2 text-muted transition-colors hover:bg-surface2 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 lg:inline-flex"
-                onClick={() => setBool(NAV_COLLAPSED_KEY, true)}
-                aria-label="Hide sidebar"
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-              <span className="whitespace-nowrap text-xl font-semibold tracking-tight text-primary">
-                Learn<span className="text-accent">Bot</span>
-              </span>
-            </div>
-            <button className="rounded-lg p-2 text-muted focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 lg:hidden" onClick={() => setIsSidebarOpen(false)} aria-label="Close sidebar">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+      <aside
+        className={`fixed inset-y-4 left-4 z-50 flex w-[90px] flex-col items-center justify-between rounded-[32px] border border-[#D9D1B8] bg-white/96 px-3 py-5 shadow-[0_18px_50px_rgba(40,32,20,0.08)] backdrop-blur transition-transform duration-200 lg:translate-x-0 ${
+          mobileNavOpen ? "translate-x-0" : "-translate-x-[130%]"
+        }`}
+      >
+        <button
+          type="button"
+          onClick={() => navigate(AppRoute.DASHBOARD)}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-[#050505] text-white"
+          aria-label="LearnBot dashboard"
+        >
+          <BookOpen className="h-5 w-5" />
+        </button>
 
-          {/* Nav */}
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3 custom-scrollbar" aria-label="Primary navigation">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                onClick={() => setIsSidebarOpen(false)}
-                className={({ isActive }) => `
-                  group flex items-center gap-3 rounded-lg px-3 py-2.5 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15
-                  ${isActive 
-                    ? 'active-nav-shadow border border-indigo-100 bg-indigo-50 text-primary font-medium dark:border-indigo-400/20 dark:bg-indigo-400/10' 
-                    : 'border border-transparent text-muted hover:-translate-y-0.5 hover:border-slate-200 hover:bg-slate-50 hover:text-primary dark:hover:border-white/10 dark:hover:bg-white/10'}
-                `}
-              >
-                <item.icon className="h-4 w-4 text-current" strokeWidth={1.8} />
-                <span className="text-sm font-medium text-current">{item.label}</span>
-              </NavLink>
-            ))}
-          </nav>
+        {dock}
 
-          {/* User Section Bottom */}
-          <div className="p-3">
-            <button 
-              onClick={handleLogoutClick}
-              disabled={isSigningOut}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-default bg-white px-3 py-2.5 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:bg-white/5 dark:hover:bg-white/10"
-            >
-              <LogOut className="w-4 h-4 text-current" />
-              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
-            </button>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={handleLogoutClick}
+          disabled={isSigningOut}
+          className="group relative flex h-12 w-12 items-center justify-center rounded-full border border-[#D9D1B8] bg-white text-[#3F3F3A] transition hover:-translate-y-0.5 hover:text-[#050505] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 disabled:bg-[#A7A29A] disabled:text-white disabled:opacity-100"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="pointer-events-none absolute left-[4.1rem] z-20 hidden rounded-full bg-[#050505] px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 lg:block">
+            {isSigningOut ? "Signing out" : "Sign out"}
+          </span>
+        </button>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Topbar */}
-        <header className="flex h-16 items-center justify-between border-b border-default bg-background/90 px-4 backdrop-blur-sm lg:px-8">
-          <button 
-            className={`${navCollapsed ? 'inline-flex' : 'lg:hidden'} rounded-lg border border-default bg-card p-2 text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:hover:bg-white/10`}
-            onClick={() => {
-              if (navCollapsed) {
-                setBool(NAV_COLLAPSED_KEY, false);
-                return;
-              }
-              setIsSidebarOpen(true);
-            }}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-
-          <div className="ml-auto flex items-center gap-4">
-            {isChatRoute && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !chatContextCollapsed;
-                    setChatContextCollapsed(next);
-                    setBool(CHAT_SIDEBAR_COLLAPSED_KEY, next);
-                    setBool(CHAT_CONTEXT_COLLAPSED_KEY, next);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-lg border border-default bg-card px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 dark:hover:bg-white/10"
-                >
-                  <Columns2 className="w-4 h-4 text-current" />
-                  {chatContextCollapsed ? 'Show Chat Panels' : 'Focus Chat'}
-                </button>
-              </div>
-            )}
+      <div className="min-h-screen lg:pl-[122px]">
+        <header className="sticky top-0 z-30 flex h-20 items-center justify-end gap-3 bg-[#FFFBEA]/88 px-4 backdrop-blur md:px-8">
+          {isChatRoute && (
             <button
-              onClick={handleLogoutClick}
-              disabled={isSigningOut}
-              className="hidden items-center gap-2 rounded-lg border border-default bg-card px-3 py-2 text-sm font-medium text-muted transition-all hover:-translate-y-0.5 hover:bg-slate-50 hover:text-primary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 sm:inline-flex dark:hover:bg-white/10"
+              type="button"
+              onClick={() => {
+                const next = !chatContextCollapsed;
+                setChatContextCollapsed(next);
+                setBool(CHAT_SIDEBAR_COLLAPSED_KEY, next);
+                setBool(CHAT_CONTEXT_COLLAPSED_KEY, next);
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-[#D9D1B8] bg-white px-4 py-2 text-sm font-semibold text-[#3F3F3A] transition hover:-translate-y-0.5 hover:border-[#E6D979] hover:text-[#050505] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10"
             >
-              <LogOut className="w-4 h-4 text-current" />
-              {isSigningOut ? 'Signing Out...' : 'Sign Out'}
+              <Columns2 className="h-4 w-4" />
+              {chatContextCollapsed ? "Show panels" : "Focus"}
             </button>
-            <div className="flex flex-col items-end hidden sm:flex">
-              <span className="text-sm font-medium text-primary">{displayName}</span>
-              <span className="text-xs font-normal text-muted">{user?.email || ''}</span>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-indigo-100 bg-indigo-50 text-accent shadow-sm dark:border-indigo-400/20 dark:bg-indigo-400/10">
-              <span className="text-sm font-semibold">{displayName?.[0]?.toUpperCase() ?? "U"}</span>
-            </div>
+          )}
+
+          <div className="hidden text-right sm:block">
+            <p className="text-sm font-bold text-[#050505]">{displayName}</p>
+            <p className="text-xs font-medium text-[#6B675F]">{user?.email || ""}</p>
+          </div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-full border border-[#D6C8FF] bg-[#EFE7FF] text-sm font-black text-[#050505]">
+            {displayName?.[0]?.toUpperCase() ?? "U"}
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">
-          <div className="mx-auto h-full max-w-7xl">
+        <main className="px-4 pb-8 md:px-8">
+          <div className="mx-auto max-w-[92rem]">
             <Outlet />
           </div>
         </main>

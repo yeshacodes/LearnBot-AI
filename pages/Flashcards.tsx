@@ -180,10 +180,9 @@ const FlashcardsPage: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
-        breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Flashcards" }]}
-        eyebrow="Flashcards"
-        title="Review cards"
-        description="Flip the card, then swipe or use the buttons to schedule the next review."
+        breadcrumbs={[{ label: "Study desk", href: "/app/dashboard" }, { label: "Flashcards" }]}
+        title="Remember what matters."
+        description="One index card at a time. Flip, swipe, and keep the review queue moving."
         action={<Button icon={isGenerating ? Loader2 : Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate from source</Button>}
       />
 
@@ -197,20 +196,20 @@ const FlashcardsPage: React.FC = () => {
           action={<Button icon={Sparkles} disabled={!selectedSourceId || isGenerating} onClick={handleGenerateDeck}>Generate deck</Button>}
         />
       ) : hasCompletedSession ? (
-        <Card className="mx-auto max-w-2xl p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-emerald-100 bg-emerald-50 text-emerald-700">
+        <Card className="mx-auto max-w-2xl bg-white p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-[#BFD0C0] bg-[#EEF4ED] text-primary">
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <h2 className="mt-5 text-3xl font-semibold text-primary">Session complete</h2>
-          <p className="mt-2 text-sm text-muted">You reviewed {sessionTotal} card{sessionTotal === 1 ? "" : "s"}.</p>
+          <h2 className="mt-5 text-4xl font-black tracking-[-0.03em] text-primary">Session complete</h2>
+          <p className="mt-2 text-sm font-medium text-[#3F3F3A]">You reviewed {sessionTotal} card{sessionTotal === 1 ? "" : "s"}.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-rose-100 bg-rose-50 p-4">
-              <p className="text-2xl font-semibold text-rose-700">{needsPractice}</p>
-              <p className="mt-1 text-xs font-medium text-rose-700">cards need more practice</p>
+            <div className="rounded-[22px] border border-[#D9D1B8] bg-white p-4">
+              <p className="text-2xl font-black text-primary">{needsPractice}</p>
+              <p className="mt-1 text-xs font-bold text-[#6B675F]">cards need more practice</p>
             </div>
-            <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-              <p className="text-2xl font-semibold text-emerald-700">{movedForward}</p>
-              <p className="mt-1 text-xs font-medium text-emerald-700">cards moved forward</p>
+            <div className="rounded-[22px] border border-[#D9D1B8] bg-white p-4">
+              <p className="text-2xl font-black text-primary">{movedForward}</p>
+              <p className="mt-1 text-xs font-bold text-[#6B675F]">cards moved forward</p>
             </div>
           </div>
           <Button className="mt-7" variant="outline" icon={Undo2} onClick={() => {
@@ -230,8 +229,8 @@ const FlashcardsPage: React.FC = () => {
       ) : (
         <section className="mx-auto flex max-w-4xl flex-col items-center">
           <div className="mb-5 w-full text-center">
-            <h2 className="text-2xl font-semibold tracking-tight text-primary">{selectedDeck.name}</h2>
-            <p className="mt-2 text-sm text-muted">Card {currentPosition} of {sessionCardIds.length}</p>
+            <h2 className="text-3xl font-black tracking-[-0.03em] text-primary">{selectedDeck.name}</h2>
+            <p className="mt-2 text-sm font-bold text-[#3F3F3A]">Card {currentPosition} of {sessionCardIds.length}</p>
           </div>
 
           <div key={currentCard.id} className="relative w-full max-w-3xl touch-pan-y select-none animate-card-enter">
@@ -256,7 +255,7 @@ const FlashcardsPage: React.FC = () => {
               onPointerMove={handlePointerMove}
               onPointerUp={finishDrag}
               onPointerCancel={finishDrag}
-              className="min-h-[30rem] w-full rounded-2xl border border-default bg-white p-8 text-left shadow-[0_24px_72px_-48px_rgba(15,23,42,0.34)] transition-transform duration-200 hover:border-indigo-200 hover:shadow-[0_28px_80px_-50px_rgba(15,23,42,0.4)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-indigo-500/15 sm:p-12 dark:bg-surface"
+              className="min-h-[30rem] w-full rounded-[32px] border border-[#D9D1B8] bg-white p-8 text-left shadow-[0_18px_50px_rgba(40,32,20,0.08)] transition-transform duration-200 hover:-translate-y-1 hover:border-[#E6D979] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 sm:p-12 dark:bg-surface"
               style={{
                 transform: `translateX(${drag.offsetX}px) rotate(${rotate}deg)`,
                 transitionDuration: drag.active ? "0ms" : "200ms",
@@ -268,18 +267,18 @@ const FlashcardsPage: React.FC = () => {
                   style={{ transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)" }}
                 >
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center backface-hidden">
-                    <p className="text-sm font-medium text-muted">Question</p>
-                    <p className="mt-6 max-w-2xl text-3xl font-semibold leading-tight text-primary md:text-4xl">
+                    <p className="text-sm font-bold text-[#3F3F3A]">Question</p>
+                    <p className="mt-6 max-w-2xl text-3xl font-black leading-tight tracking-[-0.03em] text-primary md:text-5xl">
                       {currentCard.question}
                     </p>
                   </div>
                   <div className="absolute inset-0 flex rotate-y-180 flex-col items-center justify-center text-center backface-hidden">
-                    <p className="text-sm font-medium text-muted">Answer</p>
-                    <p className="mt-6 max-w-2xl text-2xl font-semibold leading-9 text-primary md:text-3xl">
+                    <p className="text-sm font-bold text-[#3F3F3A]">Answer</p>
+                    <p className="mt-6 max-w-2xl text-2xl font-black leading-tight tracking-[-0.03em] text-primary md:text-4xl">
                       {currentCard.answer}
                     </p>
                     {currentCard.sourceExcerpt && (
-                      <p className="mt-8 max-w-2xl rounded-xl border border-default bg-slate-50 p-4 text-sm leading-6 text-muted dark:bg-white/5">
+                      <p className="mt-8 max-w-2xl rounded-[22px] border border-[#D9D1B8] bg-white p-4 text-sm font-medium leading-6 text-[#3F3F3A] dark:bg-white/5">
                         Source: {currentCard.sourceExcerpt}
                       </p>
                     )}
@@ -290,10 +289,10 @@ const FlashcardsPage: React.FC = () => {
           </div>
 
           <div className="mt-5 w-full max-w-3xl">
-            <div className="h-2 overflow-hidden rounded-full bg-surface2">
-              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(currentPosition / sessionCardIds.length) * 100}%` }} />
+            <div className="h-2 overflow-hidden rounded-full border border-[#E6D979] bg-[#FFF6B8]">
+              <div className="h-full rounded-full bg-[#050505] transition-all" style={{ width: `${(currentPosition / sessionCardIds.length) * 100}%` }} />
             </div>
-            <p className="mt-4 text-center text-sm text-muted">
+            <p className="mt-4 text-center text-sm text-[#3F3F3A]">
               {isFlipped ? "Swipe right if you knew it, left to review again." : "Tap the card or press Space to reveal the answer."}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3">
@@ -303,8 +302,8 @@ const FlashcardsPage: React.FC = () => {
           </div>
 
           <div className="mt-8 grid w-full gap-4 md:grid-cols-3">
-            <Card className="p-4">
-              <p className="text-xs font-medium text-muted">Deck</p>
+            <Card className="border-[#AFC7ED] bg-[#DCEBFF] p-4">
+              <p className="text-xs font-bold text-[#3F3F3A]">Deck</p>
               <div className="mt-2 flex flex-wrap gap-2" role="listbox" aria-label="Flashcard decks">
                 {data.flashcardDecks.slice(0, 4).map((deck) => (
                   <button
@@ -312,8 +311,8 @@ const FlashcardsPage: React.FC = () => {
                     type="button"
                     aria-selected={selectedDeck?.id === deck.id}
                     onClick={() => setSelectedDeckId(deck.id)}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
-                      selectedDeck?.id === deck.id ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 ${
+                      selectedDeck?.id === deck.id ? "border-[#050505] bg-[#050505] text-white" : "border-[#D9D1B8] bg-white text-[#3F3F3A] hover:border-[#E6D979] hover:text-primary dark:bg-white/5"
                     }`}
                   >
                     {deck.name}
@@ -321,8 +320,8 @@ const FlashcardsPage: React.FC = () => {
                 ))}
               </div>
             </Card>
-            <Card className="p-4">
-              <p className="text-xs font-medium text-muted">Source</p>
+            <Card className="border-[#D6C8FF] bg-[#EFE7FF] p-4">
+              <p className="text-xs font-bold text-[#3F3F3A]">Source</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {readySources.slice(0, 3).map((source) => (
                   <button
@@ -330,8 +329,8 @@ const FlashcardsPage: React.FC = () => {
                     type="button"
                     aria-pressed={selectedSourceId === source.id}
                     onClick={() => setSelectedSourceId(source.id)}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 ${
-                      selectedSourceId === source.id ? "border-indigo-200 bg-indigo-50 text-primary dark:bg-indigo-400/10" : "border-default bg-white text-muted hover:border-indigo-200 hover:text-primary dark:bg-white/5"
+                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#050505]/10 ${
+                      selectedSourceId === source.id ? "border-[#050505] bg-[#050505] text-white" : "border-[#D9D1B8] bg-white text-[#3F3F3A] hover:border-[#E6D979] hover:text-primary dark:bg-white/5"
                     }`}
                   >
                     {source.name}
@@ -339,20 +338,20 @@ const FlashcardsPage: React.FC = () => {
                 ))}
               </div>
             </Card>
-            <Card className="p-4">
-              <p className="text-xs font-medium text-muted">Session</p>
+            <Card className="bg-white p-4">
+              <p className="text-xs font-bold text-[#3F3F3A]">Session</p>
               <div className="mt-3 grid grid-cols-3 gap-3 text-center">
                 <div>
                   <p className="text-lg font-semibold text-primary">{sessionTotal}</p>
-                  <p className="text-xs text-muted">Reviewed</p>
+                  <p className="text-xs text-[#6B675F]">Reviewed</p>
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-emerald-700">{movedForward}</p>
-                  <p className="text-xs text-muted">Known</p>
+                  <p className="text-xs text-[#6B675F]">Known</p>
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-rose-700">{needsPractice}</p>
-                  <p className="text-xs text-muted">Review</p>
+                  <p className="text-xs text-[#6B675F]">Review</p>
                 </div>
               </div>
             </Card>
