@@ -41,3 +41,10 @@ backend/data/
 .cursor/
 .gemini/
 .codex/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local database
+backend/data/*.db

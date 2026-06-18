@@ -100,9 +100,17 @@ function removeSourceReferences(state: LearningState, sourceId: string): Learnin
   };
 }
 
-function removeStalePlaceholderSources(state: LearningState): LearningState {
+function isFailedZeroChunkSource(source: Source): boolean {
+  return source.status === "failed" && (source.chunkCount ?? 0) <= 0;
+}
+
+function isUnconfirmedLocalSource(source: Source): boolean {
+  return !isBackendSourceId(source.id);
+}
+
+function removeStaleSources(state: LearningState): LearningState {
   const staleIds = state.sources
-    .filter((source) => source.id.startsWith("source-") && !isBackendSourceId(source.id) && (source.status === "failed" || (source.chunkCount ?? 0) === 0))
+    .filter((source) => isUnconfirmedLocalSource(source) && (isFailedZeroChunkSource(source) || (source.chunkCount ?? 0) === 0))
     .map((source) => source.id);
 
   return staleIds.reduce((nextState, sourceId) => removeSourceReferences(nextState, sourceId), state);
@@ -187,7 +195,7 @@ function reviveState(state: LearningState, ownerId: string): LearningState {
     })),
     studyGoals: (state.studyGoals ?? []).map((goal) => withOwner(goal, goal.ownerId ?? "")),
   };
-  return removeStalePlaceholderSources(sanitizeOwnedState(normalized, ownerId));
+  return removeStaleSources(sanitizeOwnedState(normalized, ownerId));
 }
 
 export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -239,9 +247,12 @@ export const LearningDataProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const remoteIds = new Set(remoteSources.map((source) => source.id));
         setState((prev) => {
           const localOwnedPlaceholders = prev.sources.filter((source) => source.ownerId === ownerId && !isBackendSourceId(source.id));
-          const nextSources = [...remoteSources, ...localOwnedPlaceholders.filter((source) => !remoteIds.has(source.id))];
+          const keepLocalPlaceholders = localOwnedPlaceholders.filter(
+            (source) => !remoteIds.has(source.id) && !isFailedZeroChunkSource(source) && (source.chunkCount ?? 0) > 0,
+          );
+          const nextSources = [...remoteSources, ...keepLocalPlaceholders];
           const nextState = sanitizeOwnedState({ ...prev, ownerId, mode: ownerMode(ownerId), sources: nextSources }, ownerId);
-          return removeStalePlaceholderSources(nextState);
+          return removeStaleSources(nextState);
         });
       } catch (error) {
         console.warn("Failed to sync user sources", error);

@@ -40,9 +40,9 @@ export async function getAccessToken(): Promise<string | null> {
 export function getApiBase(): string {
   const env = import.meta.env as Record<string, string | undefined>;
   const baseRaw =
-    env.NEXT_PUBLIC_API_BASE_URL ||
     env.VITE_API_BASE ||
-    "http://localhost:8000";
+    env.NEXT_PUBLIC_API_BASE_URL ||
+    (import.meta.env.DEV ? "http://localhost:8000" : "");
   const base = baseRaw.trim();
   return base.replace(/\/$/, "");
 }
@@ -70,16 +70,24 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
   headers.set("Authorization", `Bearer ${token}`);
 
   const base = getApiBase();
+  if (!base) {
+    throw new Error("API server is not configured. Set VITE_API_BASE to your deployed LearnBot backend URL.");
+  }
+
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = `${base}${normalizedPath}`;
 
   try {
+    new URL(url);
     return await fetch(url, {
       ...options,
       headers,
     });
   } catch (error) {
-    throw new Error(`Unable to reach the server at ${url}. Check that the backend is running.`);
+    if (import.meta.env.DEV) {
+      throw new Error(`Unable to reach the server at ${url}. Check that the backend is running.`);
+    }
+    throw new Error("Unable to reach the LearnBot API. Check that VITE_API_BASE points to the deployed backend.");
   }
 }
 
@@ -93,9 +101,12 @@ export async function deleteSource(sourceId: string): Promise<{ deleted: boolean
     credentials: "include",
   });
 
+  if (res.status === 400 || res.status === 404) {
+    return { deleted: true, source_id: sourceId };
+  }
+
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Delete failed (${res.status}): ${text}`);
+    throw new Error(await parseApiError(res, `Delete failed (${res.status}). Please try again.`));
   }
 
   return res.json();

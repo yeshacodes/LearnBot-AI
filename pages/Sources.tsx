@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AppRoute } from "../types";
 import { Badge, Button, Card, EmptyState, ErrorState, Input, PageHeader } from "../components/Common";
 import { useLearningData } from "../src/contexts/LearningDataContext";
-import { deleteSource as deleteRemoteSource, generateDeckFromSources, generateQuizFromSources, isBackendSourceId } from "../src/lib/api";
+import { deleteSource as deleteRemoteSource, generateDeckFromSources, generateQuizFromSources, getApiBase, isBackendSourceId } from "../src/lib/api";
 
 const Sources: React.FC = () => {
   const data = useLearningData();
@@ -17,10 +17,21 @@ const Sources: React.FC = () => {
     () => data.sources.filter((source) => source.name.toLowerCase().includes(searchTerm.toLowerCase())),
     [data.sources, searchTerm],
   );
+  const failedZeroSources = useMemo(
+    () => data.sources.filter((source) => source.status === "failed" && (source.chunkCount ?? 0) <= 0),
+    [data.sources],
+  );
+
+  const devApiHint = import.meta.env.DEV ? ` API: ${getApiBase() || "not configured"}` : "";
 
   const handleDelete = async (id: string) => {
     setError(null);
     setDeleteNotice(null);
+    const source = data.sources.find((item) => item.id === id);
+    if (!source) return;
+    const confirmed = window.confirm(`Remove "${source.name}" from Sources?`);
+    if (!confirmed) return;
+
     try {
       if (isBackendSourceId(id)) {
         await deleteRemoteSource(id);
@@ -28,7 +39,39 @@ const Sources: React.FC = () => {
       data.deleteSource(id);
       setDeleteNotice("Source removed.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete did not complete.");
+      data.deleteSource(id);
+      setDeleteNotice("Source removed from this device.");
+      const message = err instanceof Error ? err.message : "Delete could not be confirmed.";
+      setError(`The source was removed locally, but the backend delete could not be confirmed. ${message}${devApiHint}`);
+    }
+  };
+
+  const handleClearFailedSources = async () => {
+    if (!failedZeroSources.length) return;
+    const confirmed = window.confirm(`Clear ${failedZeroSources.length} failed source${failedZeroSources.length === 1 ? "" : "s"} with no study sections?`);
+    if (!confirmed) return;
+
+    setError(null);
+    setDeleteNotice(null);
+    setBusyAction("clear-failed");
+    const failures: string[] = [];
+
+    for (const source of failedZeroSources) {
+      try {
+        if (isBackendSourceId(source.id)) {
+          await deleteRemoteSource(source.id);
+        }
+      } catch (err) {
+        failures.push(err instanceof Error ? err.message : `Could not confirm delete for ${source.name}.`);
+      } finally {
+        data.deleteSource(source.id);
+      }
+    }
+
+    setBusyAction(null);
+    setDeleteNotice(`Cleared ${failedZeroSources.length} failed source${failedZeroSources.length === 1 ? "" : "s"}.`);
+    if (failures.length) {
+      setError(`Some backend deletes could not be confirmed, but the failed sources were removed locally. ${failures[0]}${devApiHint}`);
     }
   };
 
@@ -69,7 +112,16 @@ const Sources: React.FC = () => {
         breadcrumbs={[{ label: "App", href: "/app/dashboard" }, { label: "Sources" }]}
         title="Sources"
         description="Study documents, generate practice, and ask AI from one place."
-        action={<Input placeholder="Search sources" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="sm:w-80" />}
+        action={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {failedZeroSources.length > 0 && (
+              <Button variant="outline" icon={Trash2} disabled={busyAction === "clear-failed"} onClick={handleClearFailedSources}>
+                Clear failed sources
+              </Button>
+            )}
+            <Input placeholder="Search sources" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="sm:w-80" />
+          </div>
+        }
       />
       {error && <ErrorState title="Remote sync failed" message={error} />}
       {deleteNotice && (
